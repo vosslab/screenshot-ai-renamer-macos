@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
+import argparse
 import gc
 import os
-import time
 import random
-import argparse
+import re
+import time
+from datetime import datetime, timedelta
+from typing import List, Optional, Tuple
 
 import torch
 
@@ -19,7 +22,8 @@ def clear_gpu_memory():
 	gc.collect()  # Clean Python memory
 	if torch.backends.mps.is_available():
 		torch.mps.empty_cache()  # Clears MPS (Metal Performance Shaders) memory
-		#torch.cuda.empty_cache()  # Just in case some models use CUDA fallback
+	if torch.cuda.is_available():
+		torch.cuda.empty_cache()
 
 #============================================
 def format_preview(text: str, max_lines: int = 2, line_length: int = 80) -> str:
@@ -52,18 +56,61 @@ def format_preview(text: str, max_lines: int = 2, line_length: int = 80) -> str:
 
 	return "\n".join(lines)
 
-import re
-import os
-import time
 
-def process_image(image_path: str, ai_components: dict, dry_run: bool):
+def format_duration(seconds: float) -> str:
+	"""
+	Convert seconds to a human-readable string (e.g., 1m 23s).
+	"""
+	seconds = max(0, int(seconds))
+	minutes, sec = divmod(seconds, 60)
+	hours, minutes = divmod(minutes, 60)
+	if hours:
+		return f"{hours}h {minutes}m {sec}s"
+	if minutes:
+		return f"{minutes}m {sec}s"
+	return f"{sec}s"
+
+def _compose_caption_payload(captions: List[Tuple[str, str]]) -> Tuple[str, Optional[str]]:
+	"""
+	Combine multiple captions into a single blob for the filename LLM.
+
+	Args:
+		captions (list[tuple]): List of (backend, caption) entries.
+
+	Returns:
+		tuple[str, Optional[str]]: Combined caption text and optional model guidance.
+	"""
+	parts = []
+	backends = set()
+	for backend, caption in captions:
+		backends.add(backend)
+		label = backend.replace("-", " ").title()
+		parts.append(f"{label} caption:\n{caption.strip() or 'N/A'}")
+
+	model_note = None
+	if {"moondream", "vit-gpt2"}.issubset(backends):
+		model_note = (
+			"In practice Moondream2 tends to produce richer, more context-aware descriptions than "
+			"ViT-GPT2, which is more literal. Blend both perspectives when deciding on the filename."
+		)
+
+	return "\n\n".join(parts), model_note
+
+
+def process_image(
+	image_path: str,
+	ai_components: dict,
+	dry_run: bool,
+	secondary_ai_components: Optional[dict] = None,
+):
 	"""
 	Processes a single image: extracts text, generates captions, renames file, and updates metadata.
 
-	Args:
-		image_path (str): Path to the image file.
-		ai_components (dict): AI model components.
-		dry_run (bool): If True, only prints changes without modifying files.
+		Args:
+			image_path (str): Path to the image file.
+			ai_components (dict): Primary AI model components.
+			dry_run (bool): If True, only prints changes without modifying files.
+			secondary_ai_components (dict | None): Optional second caption backend.
 	"""
 	filename = os.path.basename(image_path)
 	print('\n')
@@ -77,18 +124,31 @@ def process_image(image_path: str, ai_components: dict, dry_run: bool):
 	print(f"OCR Results:\n{format_preview(ocr_text)}")
 	print(f"Time taken for OCR: {ocr_time:.2f} seconds")
 
-	print("\nStarting Caption...")
+	print(f"\nStarting Caption ({ai_components['backend']})...")
 	start_time = time.time()
 	ai_caption = generate_caption(image_path, ai_components)
 	caption_time = time.time() - start_time
 	print(f"Caption Results:\n{format_preview(ai_caption)}")
 	print(f"Time taken for caption generation: {caption_time:.2f} seconds")
+	captions = [(ai_components["backend"], ai_caption)]
+
+	if secondary_ai_components:
+		print(f"\nStarting Secondary Caption ({secondary_ai_components['backend']})...")
+		start_time = time.time()
+		secondary_caption = generate_caption(image_path, secondary_ai_components)
+		secondary_time = time.time() - start_time
+		print(f"Secondary Caption Results:\n{format_preview(secondary_caption)}")
+		print(f"Time taken for secondary caption: {secondary_time:.2f} seconds")
+		captions.append((secondary_ai_components["backend"], secondary_caption))
+
 	clear_gpu_memory()
 
 	print("\nStarting Get AI Filename with LLM...")
 	start_time = time.time()
-	new_filename = generate_intelligent_filename(ocr_text, ai_caption)
-	print(f"AI Filename Result: {new_filename}")
+	caption_payload, model_note = _compose_caption_payload(captions)
+	filename_stub = generate_intelligent_filename(ocr_text, caption_payload, model_note)
+	filename_time = time.time() - start_time
+	print(f"AI Filename Result: {filename_stub}")
 	print(f"Time taken for filename generation: {filename_time:.2f} seconds")
 	clear_gpu_memory()
 
@@ -97,9 +157,7 @@ def process_image(image_path: str, ai_components: dict, dry_run: bool):
 	date_part = match.group(1) if match else "unknown-date"
 
 	# Construct the final filename with correct date prefix
-	new_filename = f"screenshot_{date_part}-{new_filename}"
-
-	filename_time = time.time() - start_time
+	new_filename = f"screenshot_{date_part}-{filename_stub}"
 	new_path = os.path.join(os.path.dirname(image_path), new_filename)
 
 	if dry_run:
@@ -115,11 +173,7 @@ def process_image(image_path: str, ai_components: dict, dry_run: bool):
 #============================================
 def process_directory(directory: str):
 	"""
-	Processes all images in a directory with detailed step-by-step feedback.
-
-	Args:
-		directory (str): Path to the directory containing images.
-		dry_run (bool): If True, only prints changes without modifying files.
+	Collect all screenshot-style PNGs in the specified directory.
 	"""
 	image_files = []
 	for filename in os.listdir(directory):
@@ -131,7 +185,7 @@ def process_directory(directory: str):
 		#if not extension in (".png", ".jpg", ".jpeg"):
 		if extension != ".png":
 			continue
-		image_files.append(lower_filename)
+		image_files.append(filename)
 
 	if not image_files:
 		print("No images found in the specified directory.")
@@ -146,12 +200,14 @@ def parse_args():
 	"""
 	parser = argparse.ArgumentParser(description="Batch process images with step-by-step feedback.")
 	parser.add_argument("-d", "--directory", dest="directory", nargs="?",
-				default=os.path.expanduser("~/Desktop"),
-				help="Directory containing images (default: ~/Desktop)")
+					default=os.path.expanduser("~/Desktop"),
+					help="Directory containing images (default: ~/Desktop)")
 	parser.add_argument("-n", "--dry-run", dest="dry_run", action="store_true",
 						help="Perform a dry run without modifying files.")
 	parser.add_argument("-t", "--unit-test", dest="unit_test", action="store_true",
 						help="Run a unit test (ask LLM to add two numbers).")
+	parser.add_argument("--caption-prompt", dest="caption_prompt",
+						help="Custom captioning prompt applied to both caption models.")
 	args = parser.parse_args()
 	return args
 
@@ -175,17 +231,61 @@ def main():
 	else:
 		image_files.sort(key=len)
 
+	total_files = len(image_files)
 	for i, filename in enumerate(image_files, start=1):
 		if i > 9:
-			print(f"... plus {len(image_files)-9} more files")
+			print(f"... plus {total_files-9} more files")
 			break
 		print(f"{i}: {filename}")
 
-	ai_components = setup_ai_components()
+	mode = "Dry run (no changes)" if args.dry_run else "Live rename"
+	print(f"\nPlan summary: Found {total_files} screenshots in {args.directory}. {mode}.")
+
+	try:
+		ai_components = setup_ai_components(prompt=args.caption_prompt, backend="moondream")
+	except Exception as exc:  # pylint: disable=broad-exception-caught
+		print(f"Failed to load Moondream backend: {exc}")
+		raise
+
+	try:
+		secondary_ai_components = setup_ai_components(prompt=args.caption_prompt, backend="vit-gpt2")
+	except Exception as exc:  # pylint: disable=broad-exception-caught
+		print(f"Failed to load ViT-GPT2 backend: {exc}")
+		secondary_ai_components = None
+
+	print("\nCaption backends: Moondream2", end="")
+	if secondary_ai_components:
+		print(" + ViT-GPT2")
+	else:
+		print(" (ViT-GPT2 unavailable)")
+	if args.caption_prompt:
+		print(f"Custom caption prompt: {format_preview(args.caption_prompt, max_lines=3)}")
+
+	durations: List[float] = []
 	for i, filename in enumerate(image_files, start=1):
 		image_path = os.path.join(args.directory, filename)
 		print(f"\nProcessing image {i} of {len(image_files)}")
-		process_image(image_path, ai_components, args.dry_run)
+		image_start = time.time()
+		process_image(
+			image_path,
+			ai_components,
+			args.dry_run,
+			secondary_ai_components,
+		)
+		image_duration = time.time() - image_start
+		durations.append(image_duration)
+		avg_duration = sum(durations) / len(durations)
+		remaining = len(image_files) - i
+		print(f"Image {i} completed in {format_duration(image_duration)} (avg {format_duration(avg_duration)}).")
+		if remaining > 0:
+			eta_seconds = avg_duration * remaining
+			eta_time = datetime.now() + timedelta(seconds=eta_seconds)
+			print(f"Estimated completion in {format_duration(eta_seconds)} (~{eta_time.strftime('%H:%M:%S')}).")
+
+	total_elapsed = sum(durations)
+	if durations:
+		print(f"\nCompleted {len(durations)} images in {format_duration(total_elapsed)} "
+			  f"(avg {format_duration(total_elapsed/len(durations))}).")
 
 
 if __name__ == "__main__":

@@ -16,7 +16,11 @@ If you haven't installed Homebrew yet, run:
 
 #### Install system dependencies (macOS):
 ```bash
+# Option A: install individually
 brew install ollama exiftool vips
+
+# Option B: use the bundled Brewfile
+brew bundle
 ```
 
 #### Install Python dependencies:
@@ -70,7 +74,8 @@ SUCCESS! 95 + 48 = 143
 
 ### Command-Line Options:
 ```
-usage: screenshot-renamer.py [-h] [-n] [-t] [directory]
+usage: screenshot-renamer.py [-h] [-d [DIRECTORY]] [-n] [-t]
+                             [--caption-prompt CAPTION_PROMPT]
 
 Batch process images with step-by-step feedback.
 
@@ -79,9 +84,20 @@ positional arguments:
 
 options:
   -h, --help       Show this help message and exit.
+  -d [DIRECTORY], --directory [DIRECTORY]
+                   Directory containing images (default: ~/Desktop)
   -n, --dry-run    Perform a dry run without modifying files.
   -t, --unit-test  Run a unit test (ask LLM to add two numbers).
+  --caption-prompt CAPTION_PROMPT
+                    Custom captioning prompt applied to both Moondream2 and
+                    ViT-GPT2.
 ```
+
+### Advanced Options
+- The tool now always runs **both** Moondream2 (context-heavy) and ViT-GPT2 (literal) captions per screenshot; you can still steer both with `--caption-prompt "..."`.
+- Before processing it prints a plan summary (screenshots found, mode) and, after each image, logs per-image duration plus an updated completion ETA.
+- The filename generator now prioritizes the screenshot’s purpose or category. It avoids literal OCR lists and uses neutral terms for people images (e.g., `leadership_team_headshot`, `portrait_photo`) instead of detailed descriptors.
+- Set the `OLLAMA_MODEL` environment variable to force a specific Ollama model (overrides the VRAM-based auto selection).
 
 ---
 
@@ -89,8 +105,8 @@ options:
 
 1. Finds macOS screenshots in the specified directory.
 2. Extracts text from the screenshot using OCR.
-3. Generates a caption using AI (**Moondream2**).
-4. Creates a smart filename using an LLM (**Ollama**).
+3. Generates captions using both **Moondream2** (context-rich) and **ViT-GPT2** (literal).
+4. Combines OCR text plus the two captions and feeds them to an Ollama LLM for snake_case filename suggestions (with guidance on each caption’s strengths).
 5. Renames the file, prefixing it with the original date (`screenshot_YYYY-MM-DD`).
 6. Writes metadata (OCR text & AI caption) into the image’s EXIF.
 
@@ -150,6 +166,7 @@ Then update `config_ollama.py` to force using that model.
 
 ## 🔗 Resources
 
+- **[AGENTS.md](./AGENTS.md)** – Deep dive into how OCR, captioning, and Ollama prompts cooperate.
 - **[Ollama Documentation](https://ollama.com/docs)**
 - **[Ollama Phi Model](https://ollama.com/library/phi)**
 - **[Moondream2 Model](https://huggingface.co/vikhyatk/moondream2)**
