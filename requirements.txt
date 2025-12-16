@@ -1,6 +1,6 @@
 accelerate
+apple-foundation-models
 einops
-ollama
 pillow
 pyexiftool
 pytesseract

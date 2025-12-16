@@ -9,16 +9,17 @@ import time
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
 
-import torch
 
-from tools.extract_text import extract_text_from_image
-from tools.generate_caption import generate_caption, setup_ai_components
-from tools.intelligent_filename import generate_intelligent_filename
-from tools.update_metadata import write_exif_metadata
+RENAMED_PATTERN = re.compile(
+	r"^screenshot_(\d{4}-\d{2}-\d{2}|unknown-date)-[a-z0-9_-]+\.png$",
+	re.IGNORECASE,
+)
 
 
 def clear_gpu_memory():
 	"""Forcefully clears GPU memory after processing an image to prevent out-of-memory errors."""
+	import torch  # Lazy import to avoid slowing CLI help.
+
 	gc.collect()  # Clean Python memory
 	if torch.backends.mps.is_available():
 		torch.mps.empty_cache()  # Clears MPS (Metal Performance Shaders) memory
@@ -112,6 +113,11 @@ def process_image(
 			dry_run (bool): If True, only prints changes without modifying files.
 			secondary_ai_components (dict | None): Optional second caption backend.
 	"""
+	from tools.extract_text import extract_text_from_image
+	from tools.generate_caption import generate_caption
+	from tools.intelligent_filename import generate_intelligent_filename
+	from tools.update_metadata import write_exif_metadata
+
 	filename = os.path.basename(image_path)
 	print('\n')
 	print('='* 60)
@@ -174,8 +180,12 @@ def process_image(
 def process_directory(directory: str):
 	"""
 	Collect all screenshot-style PNGs in the specified directory.
+
+	Returns:
+		tuple[list[str], list[str]]: (pending screenshots, already-renamed files that were skipped)
 	"""
 	image_files = []
+	already_renamed = []
 	for filename in os.listdir(directory):
 		#note macos filesystem are 99% of the time case INsensitive
 		lower_filename = filename.lower()
@@ -185,13 +195,17 @@ def process_directory(directory: str):
 		#if not extension in (".png", ".jpg", ".jpeg"):
 		if extension != ".png":
 			continue
+		if RENAMED_PATTERN.match(lower_filename):
+			already_renamed.append(filename)
+			continue
 		image_files.append(filename)
 
-	if not image_files:
+	if not image_files and already_renamed:
+		print("Only already-renamed screenshots found; nothing to do.")
+	elif not image_files:
 		print("No images found in the specified directory.")
-		raise FileNotFoundError
 
-	return image_files
+	return image_files, already_renamed
 
 #============================================
 def parse_args():
@@ -220,11 +234,13 @@ def main():
 
 	if args.unit_test:
 		import sys
-		from tools import config_ollama
-		config_ollama.unit_test()
+		from tools import config_apple_models
+		config_apple_models.unit_test()
 		sys.exit(0)
 
-	image_files = process_directory(args.directory)
+	image_files, already_renamed = process_directory(args.directory)
+	if not image_files:
+		return
 	image_files.sort()
 	if args.dry_run is True:
 		random.shuffle(image_files)
@@ -238,10 +254,18 @@ def main():
 			break
 		print(f"{i}: {filename}")
 
+	if already_renamed:
+		print(f"Skipping {len(already_renamed)} already-renamed files.")
+
 	mode = "Dry run (no changes)" if args.dry_run else "Live rename"
-	print(f"\nPlan summary: Found {total_files} screenshots in {args.directory}. {mode}.")
+	summary = f"\nPlan summary: Found {total_files} screenshots in {args.directory}."
+	if already_renamed:
+		summary += f" Skipping {len(already_renamed)} already renamed files."
+	print(f"{summary} {mode}.")
 
 	try:
+		from tools.generate_caption import setup_ai_components
+
 		ai_components = setup_ai_components(prompt=args.caption_prompt, backend="moondream")
 	except Exception as exc:  # pylint: disable=broad-exception-caught
 		print(f"Failed to load Moondream backend: {exc}")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import os
-import pytesseract
+import pytesseract  # Heavy import; keep at module level for runtime clarity.
 from PIL import Image
 
 def extract_text_from_image(image_path: str) -> str:

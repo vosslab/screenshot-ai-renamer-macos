@@ -188,7 +188,7 @@ mkdocs-material  # Material theme for MkDocs documentation sites
 mutagen  # Read and write audio metadata tags (MP3, FLAC, etc.)
 num2word  # Convert numbers into words (for example 42 to forty two)
 numpy  # Core n-dimensional arrays and vectorized numerical computing
-ollama  # Client for interacting with a local Ollama model server
+apple-foundation-models  # Python bindings for on-device Apple Foundation Models (macOS 26+)
 opencv-python  # OpenCV bindings for computer vision and image processing
 openpyxl  # Read and write Excel .xlsx files
 pandas  # DataFrames for tabular data analysis and ETL

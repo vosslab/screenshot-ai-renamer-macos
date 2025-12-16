@@ -3,6 +3,18 @@
 import argparse
 from typing import Optional
 
+MAX_CONTEXT_CHARS = 1500  # Keep prompts within the Apple Foundation Models context limits.
+
+
+def _truncate(text: str, limit: int = MAX_CONTEXT_CHARS) -> str:
+    """Trim text to a safe length for the on-device model."""
+    if not text:
+        return "N/A"
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3].rstrip() + "..."
+
 
 def generate_intelligent_filename(
     ocr_text: str,
@@ -39,16 +51,16 @@ def generate_intelligent_filename(
         "Use the information below to infer the screenshot's purpose. "
         "Prioritize themes over literal text so the filename reflects what the screenshot is about."
     )
-    prompt.append(f"OCR Text:\n{ocr_text.strip() or 'N/A'}")
+    prompt.append(f"OCR Text:\n{_truncate(ocr_text)}")
     if model_note:
         prompt.append(model_note)
-    prompt.append(f"Caption Intelligence:\n{caption_context.strip() or 'N/A'}")
+    prompt.append(f"Caption Intelligence:\n{_truncate(caption_context)}")
     prompt.append("Filename:")
     full_prompt = "\n\n".join(prompt)
 
-    from tools import config_ollama
+    from tools import config_apple_models
 
-    response = config_ollama.run_ollama(full_prompt).strip()
+    response = config_apple_models.run_apple_model(full_prompt).strip()
 
     filename = response.split("\n")[0].lower()
     filename = filename.replace(" ", "_").replace("__", "_")
@@ -73,8 +85,8 @@ def main():
     args = parser.parse_args()
 
     if args.test:
-        from tools import config_ollama
-        config_ollama.unit_test()
+        from tools import config_apple_models
+        config_apple_models.unit_test()
     else:
         new_filename = generate_intelligent_filename(args.ocr_text, args.ai_caption, args.model_note)
         print(f"Generated Filename: {new_filename}")

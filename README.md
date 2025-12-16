@@ -1,10 +1,15 @@
 # macOS AI Screenshot Renamer
 
-A Python tool that extracts on-screen text, generates AI captions, and renames macOS screenshots with clear, context-aware filenames. It uses OCR, vision captioners, and an LLM to keep names concise and searchable.
+A Python tool that extracts on-screen text, generates AI captions, and renames macOS screenshots with clear, context-aware filenames. It now targets Apple Foundation Models on Apple Silicon for fast, on-device filename generation.
 
 ---
 
 ## Get Running
+
+### Requirements
+- Apple Silicon (arm64) running macOS 26.0+ with Apple Intelligence enabled.
+- Python 3.9+.
+- Xcode command line tools (`xcode-select --install`).
 
 ### Install required dependencies
 
@@ -16,7 +21,7 @@ A Python tool that extracts on-screen text, generates AI captions, and renames m
 #### System dependencies (macOS)
 ```bash
 # Option A: install individually
-brew install ollama exiftool vips
+brew install exiftool vips
 
 # Option B: use the bundled Brewfile
 brew bundle
@@ -27,26 +32,21 @@ brew bundle
 pip install -r requirements.txt
 ```
 
----
-
-## How to Run
-
-### Start the Ollama server
-```bash
-ollama serve
-```
-
-### Verify the LLM path (unit test)
+### Verify Apple Intelligence availability
+The unit test will fail fast if Apple Intelligence is unavailable:
 ```bash
 ./screenshot-renamer.py -t
 ```
 Example output:
 ```
-Selected Ollama model: phi4:14b-q8_0
-Running unit test...
-Ollama completed in 2.38 seconds
+Running Apple Foundation Models unit test...
+Apple Foundation Models completed in 0.42 seconds (attempt 1)
 SUCCESS! 95 + 48 = 143
 ```
+
+---
+
+## How to Run
 
 ### Preview changes (dry run)
 ```bash
@@ -93,7 +93,7 @@ options:
 - Both Moondream2 (context-heavy) and ViT-GPT2 (literal) captions run for every screenshot; steer both with `--caption-prompt "..."`.
 - Before processing, the script prints a plan summary (screenshots found, mode). After each image it logs per-image duration and an updated ETA.
 - Filename generation prioritizes the screenshot’s purpose or category. It avoids verbatim OCR lists and uses neutral terms for people images (e.g., `leadership_team_headshot`, `portrait_photo`).
-- Set the `OLLAMA_MODEL` environment variable to force a specific Ollama model (overrides VRAM-based auto selection).
+- Prompts are trimmed to fit the Apple Foundation Models 4,096-token context window.
 
 ---
 
@@ -102,7 +102,7 @@ options:
 1. Finds macOS screenshots in the target directory.
 2. Extracts text with OCR.
 3. Generates captions with **Moondream2** (context-rich) and **ViT-GPT2** (literal).
-4. Combines OCR text and captions, then sends them to an Ollama LLM for snake_case filename suggestions (with guidance on each captioner’s strengths).
+4. Combines OCR text and captions, then sends them to Apple Foundation Models for snake_case filename suggestions (with guidance on each captioner’s strengths).
 5. Renames the file, keeping the original date prefix (`screenshot_YYYY-MM-DD`).
 6. Writes metadata (OCR text and AI caption) into EXIF.
 
@@ -124,45 +124,23 @@ screenshot_2025-01-09-wifi_networking_interface_details.png
 
 ## Troubleshooting
 
-### Ollama server not running
-Start the server:
-```bash
-ollama serve
-```
+### Apple Intelligence not available
+- Confirm the Mac is Apple Silicon (arm64).
+- Confirm macOS is 26.0 or newer and Apple Intelligence is enabled.
+- Ensure Xcode command line tools are installed (`xcode-select --install`).
 
-### Model not found (`ollama._types.ResponseError: model not found`)
-If you see:
-```bash
-ollama._types.ResponseError: model "llama3.2:3b-instruct-q5_K_M" not found, try pulling it first (status code: 404)
-```
-Download the model:
-```bash
-ollama pull llama3.2:3b-instruct-q5_K_M
-```
+### Context window exceeded
+Prompts are trimmed automatically, but if you see context-related errors, reduce the caption prompt or move large OCR-heavy screenshots out of the batch.
 
-### Selecting the right Ollama model
-The script picks a model based on available VRAM:
-
-| VRAM Size      | Model Used                          |
-|---------------|--------------------------------|
-| **>30GB**     | `phi4:14b-q8_0`               |
-| **>14GB**     | `phi4:14b-q4_K_M`             |
-| **>4GB**      | `llama3.2:3b-instruct-q5_K_M` |
-| **Default**   | `llama3.2:1b-instruct-q4_K_M` |
-
-If VRAM is limited, pull a smaller model:
-```bash
-ollama pull llama3.2:1b-instruct-q4_K_M
-```
-Then update `config_ollama.py` to force that model.
+### Performance
+All generation runs on-device. If processing still runs hot, close other GPU-heavy apps and reduce batch size.
 
 ---
 
 ## Resources
 
-- **[AGENTS.md](./AGENTS.md)** – How OCR, captioning, and Ollama prompts cooperate.
-- **[Ollama Documentation](https://ollama.com/docs)**
-- **[Ollama Phi Model](https://ollama.com/library/phi)**
+- **[AGENTS.md](./AGENTS.md)** – How OCR, captioning, and filename prompts cooperate.
+- **[apple-foundation-models](https://pypi.org/project/apple-foundation-models/)** – Python bindings for Apple Foundation Models.
 - **[Moondream2 Model](https://huggingface.co/vikhyatk/moondream2)**
 - **[Homebrew Documentation](https://brew.sh/)**
 - **[ExifTool Documentation](https://exiftool.org/)**

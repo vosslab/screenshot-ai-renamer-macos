@@ -18,7 +18,7 @@ swap in new models confidently.
    merges OCR text and all captions, adding a model note that reminds the final
    LLM how to weigh Moondream vs. ViT-GPT2 if both are present.
 5. **Filename Agent** – `tools/intelligent_filename.py` sends the aggregated
-   context to Ollama via `tools/config_ollama.py` / `tools/llm_wrapper.py`,
+   context to Apple Foundation Models via `tools/config_apple_models.py`,
    enforcing snake_case, 64-character limits, neutral descriptors for people, and
    “no extension” rules.
 6. **Actions** – The script renames the file and writes EXIF metadata so the new
@@ -37,22 +37,21 @@ swap in new models confidently.
   sentence in `_compose_caption_payload()` if you swap models.
 - **Filename instructions** demand snake_case, no extension, and concise intent-
   focused wording. Update `tools/intelligent_filename.py` if you want different
-  rules.
+  rules. OCR and caption inputs are trimmed to stay within the Apple Foundation
+  Models 4,096-token context window.
 
-## Ollama / LLM Wrapper
+## Apple Foundation Models Backend
 
-`tools/llm_wrapper.py` centralizes model discovery and response parsing:
+`tools/config_apple_models.py` wraps the Python bindings for Apple Foundation
+Models:
 
-- `get_vram_size_in_gb()` inspects macOS hardware and is used to pick a default
-  model in `tools/config_ollama.py` (overridden by `$OLLAMA_MODEL`).
-- `list_ollama_models()` ensures required models are locally available before we
-  call them.
-- `extract_response_text()` strips `<response>` XML wrappers when models reply
-  with structured output, keeping downstream code clean.
-
-Currently `tools/config_ollama.py` still uses Ollama’s Python `chat()` API for
-performance, but if you prefer shell-based execution (`ollama run ...`) you can
-swap in `llm_wrapper.query_ollama_model()` and maintain a single code path.
+- The code requires an Apple Silicon Mac running macOS 26+ with Apple
+  Intelligence enabled.
+- `run_apple_model()` opens a short-lived session, executes a text generation
+  with low temperature, and retries transient failures.
+- `unit_test()` validates availability by solving a simple math prompt.
+- If you need structured output or streaming, extend `run_apple_model()` to
+  accept schema/stream parameters and pass them through to `Session.generate()`.
 
 ## Extending the Agents
 
