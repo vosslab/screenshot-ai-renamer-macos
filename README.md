@@ -1,20 +1,19 @@
 # macOS AI Screenshot Renamer
 
-A Python script that extracts text, generates AI captions, and intelligently renames macOS screenshots using OCR and LLMs.
+A Python tool that extracts on-screen text, generates AI captions, and renames macOS screenshots with clear, context-aware filenames. It uses OCR, vision captioners, and an LLM to keep names concise and searchable.
 
 ---
 
-## 📌 Get Running
+## Get Running
 
-### 1️⃣ Install Required Dependencies
+### Install required dependencies
 
-#### Install Homebrew (if not installed)
-If you haven't installed Homebrew yet, run:
+#### Homebrew (if not installed)
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-#### Install system dependencies (macOS):
+#### System dependencies (macOS)
 ```bash
 # Option A: install individually
 brew install ollama exiftool vips
@@ -23,28 +22,25 @@ brew install ollama exiftool vips
 brew bundle
 ```
 
-#### Install Python dependencies:
+#### Python dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
 ---
 
-## ▶️ How to Run
+## How to Run
 
-### 1️⃣ Start the Ollama Server
-
-Before running the script, start the Ollama server:
+### Start the Ollama server
 ```bash
 ollama serve
 ```
 
-### 2️⃣ Run the Ollama Unit Test
-Before processing screenshots, verify that the LLM is working properly:
+### Verify the LLM path (unit test)
 ```bash
 ./screenshot-renamer.py -t
 ```
-Example Output:
+Example output:
 ```
 Selected Ollama model: phi4:14b-q8_0
 Running unit test...
@@ -52,27 +48,27 @@ Ollama completed in 2.38 seconds
 SUCCESS! 95 + 48 = 143
 ```
 
-### 3️⃣ Run in Dry-Run Mode (Preview Changes)
+### Preview changes (dry run)
 ```bash
 ./screenshot-renamer.py --dry-run
 ```
-> Dry-run mode: Shows how images would be renamed without making changes.
+Shows proposed filenames without modifying files.
 
-### 4️⃣ Run Normally (Modify Files)
+### Process screenshots
 ```bash
 ./screenshot-renamer.py
 ```
-> This will rename and update metadata for all screenshots in `~/Desktop` by default.
+Renames and updates metadata for all screenshots in `~/Desktop` by default.
 
 ---
 
-## 📌 Usage Help
+## Usage Help
 
 ```bash
 ./screenshot-renamer.py -h
 ```
 
-### Command-Line Options:
+### Command-line options
 ```
 usage: screenshot-renamer.py [-h] [-d [DIRECTORY]] [-n] [-t]
                              [--caption-prompt CAPTION_PROMPT]
@@ -93,61 +89,59 @@ options:
                     ViT-GPT2.
 ```
 
-### Advanced Options
-- The tool now always runs **both** Moondream2 (context-heavy) and ViT-GPT2 (literal) captions per screenshot; you can still steer both with `--caption-prompt "..."`.
-- Before processing it prints a plan summary (screenshots found, mode) and, after each image, logs per-image duration plus an updated completion ETA.
-- The filename generator now prioritizes the screenshot’s purpose or category. It avoids literal OCR lists and uses neutral terms for people images (e.g., `leadership_team_headshot`, `portrait_photo`) instead of detailed descriptors.
-- Set the `OLLAMA_MODEL` environment variable to force a specific Ollama model (overrides the VRAM-based auto selection).
+### Advanced options
+- Both Moondream2 (context-heavy) and ViT-GPT2 (literal) captions run for every screenshot; steer both with `--caption-prompt "..."`.
+- Before processing, the script prints a plan summary (screenshots found, mode). After each image it logs per-image duration and an updated ETA.
+- Filename generation prioritizes the screenshot’s purpose or category. It avoids verbatim OCR lists and uses neutral terms for people images (e.g., `leadership_team_headshot`, `portrait_photo`).
+- Set the `OLLAMA_MODEL` environment variable to force a specific Ollama model (overrides VRAM-based auto selection).
 
 ---
 
-## 🔧 How It Works
+## How It Works
 
-1. Finds macOS screenshots in the specified directory.
-2. Extracts text from the screenshot using OCR.
-3. Generates captions using both **Moondream2** (context-rich) and **ViT-GPT2** (literal).
-4. Combines OCR text plus the two captions and feeds them to an Ollama LLM for snake_case filename suggestions (with guidance on each caption’s strengths).
-5. Renames the file, prefixing it with the original date (`screenshot_YYYY-MM-DD`).
-6. Writes metadata (OCR text & AI caption) into the image’s EXIF.
+1. Finds macOS screenshots in the target directory.
+2. Extracts text with OCR.
+3. Generates captions with **Moondream2** (context-rich) and **ViT-GPT2** (literal).
+4. Combines OCR text and captions, then sends them to an Ollama LLM for snake_case filename suggestions (with guidance on each captioner’s strengths).
+5. Renames the file, keeping the original date prefix (`screenshot_YYYY-MM-DD`).
+6. Writes metadata (OCR text and AI caption) into EXIF.
 
 ---
 
-## 📌 Example Before & After
+## Example Before and After
 
-### **Original macOS Screenshot:**
+### Original macOS screenshot
 ```
 Screenshot_2025-01-09_at_6.16.30_PM.png
 ```
 
-### **AI Processed Filename:**
+### AI-processed filename
 ```
 screenshot_2025-01-09-wifi_networking_interface_details.png
 ```
 
 ---
 
-## 🛠 Troubleshooting
+## Troubleshooting
 
-### Ollama Server Not Running
-
-If you see an error related to **Ollama not responding**, start the server:
+### Ollama server not running
+Start the server:
 ```bash
 ollama serve
 ```
 
-### Model Not Found (`ollama._types.ResponseError: model not found`)
-If you see an error like:
+### Model not found (`ollama._types.ResponseError: model not found`)
+If you see:
 ```bash
 ollama._types.ResponseError: model "llama3.2:3b-instruct-q5_K_M" not found, try pulling it first (status code: 404)
 ```
-Run the following command to download the required model:
+Download the model:
 ```bash
 ollama pull llama3.2:3b-instruct-q5_K_M
 ```
-This ensures the correct model is available for processing.
 
-### Selecting the Right Ollama Model
-The script automatically selects the best Ollama model based on available VRAM:
+### Selecting the right Ollama model
+The script picks a model based on available VRAM:
 
 | VRAM Size      | Model Used                          |
 |---------------|--------------------------------|
@@ -156,17 +150,17 @@ The script automatically selects the best Ollama model based on available VRAM:
 | **>4GB**      | `llama3.2:3b-instruct-q5_K_M` |
 | **Default**   | `llama3.2:1b-instruct-q4_K_M` |
 
-If your system **lacks VRAM**, you may need to manually select a smaller model by running:
+If VRAM is limited, pull a smaller model:
 ```bash
 ollama pull llama3.2:1b-instruct-q4_K_M
 ```
-Then update `config_ollama.py` to force using that model.
+Then update `config_ollama.py` to force that model.
 
 ---
 
-## 🔗 Resources
+## Resources
 
-- **[AGENTS.md](./AGENTS.md)** – Deep dive into how OCR, captioning, and Ollama prompts cooperate.
+- **[AGENTS.md](./AGENTS.md)** – How OCR, captioning, and Ollama prompts cooperate.
 - **[Ollama Documentation](https://ollama.com/docs)**
 - **[Ollama Phi Model](https://ollama.com/library/phi)**
 - **[Moondream2 Model](https://huggingface.co/vikhyatk/moondream2)**
@@ -175,12 +169,12 @@ Then update `config_ollama.py` to force using that model.
 
 ---
 
-## 📌 Contributing
+## Contributing
 
-Pull requests are welcome! Open an issue if you encounter bugs or have feature requests.
+Pull requests are welcome. Open an issue for bugs or feature requests.
 
 ---
 
-## 📜 License
+## License
 
-This project is licensed under the **GPL v3.0**.
+Licensed under the **GPL v3.0**.
