@@ -64,3 +64,8 @@ Models:
 
 Keep this file updated whenever the coordination logic changes; it’s the quick
 reference for anyone debugging or tuning the agent stack.
+## Coding Style
+See Python coding style in docs/PYTHON_STYLE.md.
+See Markdown style in docs/MARKDOWN_STYLE.md.
+See repo style in docs/REPO_STYLE.md.
+When making edits, document them in docs/CHANGELOG.md.
