@@ -20,6 +20,7 @@ Repo-wide conventions for this project and related repos.
 
 ## Dependency manifests
 - Store Python dependencies in `pip_requirements.txt` at the repo root.
+- Use `pip_requirements.txt` not `requirements.txt` for clarity reasons.
 - Store Homebrew packages in `Brewfile` at the repo root.
 - Use per-subproject manifests only when a subfolder is a standalone project.
 - Document non-default system dependencies in `docs/INSTALL.md`.
@@ -50,7 +51,7 @@ Repo-wide conventions for this project and related repos.
 - `docs/USAGE.md`: how to run the tool, CLI flags, and practical examples.
 
 ### Centrally maintained docs, do not edit locally
-- `docs/AUTHORS.md`: primary maintainers and notable contributors; keep short.
+- `docs/AUTHORS.md`: primary maintainers and notable contributors
 - `docs/MARKDOWN_STYLE.md`: Markdown writing rules and formatting conventions for this repo.
 - `docs/PYTHON_STYLE.md`: Python formatting, linting, and project-specific conventions.
 - `docs/REPO_STYLE.md`: repo-level organization, conventions, and file placement rules.
