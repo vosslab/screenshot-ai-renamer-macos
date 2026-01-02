@@ -110,6 +110,23 @@ def format_duration(seconds: float) -> str:
 		return f"{minutes}m {sec}s"
 	return f"{sec}s"
 
+#============================================
+def is_png_file(path: str) -> bool:
+	"""
+	Return True when a path points to a PNG file (case-insensitive).
+	"""
+	return os.path.splitext(path)[-1].lower() == ".png"
+
+
+def format_rename_pair(old_path: str, new_path: str) -> str:
+	"""
+	Format a rename preview using only basenames, with a newline before the arrow.
+	"""
+	old_name = os.path.basename(old_path)
+	new_name = os.path.basename(new_path)
+	return f"'{old_name}'\n    -> '{new_name}'"
+
+
 def _compose_caption_payload(captions: List[Tuple[str, str]]) -> Tuple[str, Optional[str]]:
 	"""
 	Combine multiple captions into a single blob for the filename LLM.
@@ -142,7 +159,7 @@ def process_image(
 	ai_components: dict,
 	dry_run: bool,
 	secondary_ai_components: Optional[dict] = None,
-):
+)-> bool:
 	"""
 	Processes a single image: extracts text, generates captions, renames file, and updates metadata.
 
@@ -151,6 +168,9 @@ def process_image(
 			ai_components (dict): Primary AI model components.
 			dry_run (bool): If True, only prints changes without modifying files.
 			secondary_ai_components (dict | None): Optional second caption backend.
+
+		Returns:
+			bool: True if the image was processed, False if it was skipped (e.g., disappeared).
 	"""
 	from tools.extract_text import extract_text_from_image
 	from tools.generate_caption import generate_caption
@@ -162,9 +182,20 @@ def process_image(
 	print(colorize("=" * 60, Ansi.DIM))
 	print(colorize(f"Processing image: {filename}", Ansi.BOLD, Ansi.CYAN))
 
+	if not is_png_file(filename):
+		print(colorize(f"Skipping non-PNG file: {filename}", Ansi.YELLOW))
+		return False
+	if not os.path.exists(image_path):
+		print(colorize(f"Skipping missing file: {filename}", Ansi.YELLOW))
+		return False
+
 	print(colorize("\nStarting OCR...", Ansi.YELLOW))
 	start_time = time.time()
-	ocr_text = extract_text_from_image(image_path)
+	try:
+		ocr_text = extract_text_from_image(image_path)
+	except FileNotFoundError:
+		print(colorize(f"Skipping missing file during OCR: {filename}", Ansi.YELLOW))
+		return False
 	ocr_time = time.time() - start_time
 	print(colorize("OCR Results:", Ansi.BLUE))
 	print(format_preview(ocr_text))
@@ -172,7 +203,11 @@ def process_image(
 
 	print(colorize(f"\nStarting Caption ({ai_components['backend']})...", Ansi.YELLOW))
 	start_time = time.time()
-	ai_caption = generate_caption(image_path, ai_components)
+	try:
+		ai_caption = generate_caption(image_path, ai_components)
+	except FileNotFoundError:
+		print(colorize(f"Skipping missing file during caption: {filename}", Ansi.YELLOW))
+		return False
 	caption_time = time.time() - start_time
 	print(colorize("Caption Results:", Ansi.BLUE))
 	print(format_preview(ai_caption))
@@ -185,7 +220,14 @@ def process_image(
 			Ansi.YELLOW,
 		))
 		start_time = time.time()
-		secondary_caption = generate_caption(image_path, secondary_ai_components)
+		try:
+			secondary_caption = generate_caption(image_path, secondary_ai_components)
+		except FileNotFoundError:
+			print(colorize(
+				f"Skipping missing file during secondary caption: {filename}",
+				Ansi.YELLOW,
+			))
+			return False
 		secondary_time = time.time() - start_time
 		print(colorize("Secondary Caption Results:", Ansi.BLUE))
 		print(format_preview(secondary_caption))
@@ -215,24 +257,43 @@ def process_image(
 	new_filename = f"screenshot_{date_part}-{filename_stub}"
 	new_path = os.path.join(os.path.dirname(image_path), new_filename)
 
+	if not os.path.exists(image_path):
+		print(colorize(f"Skipping missing file before final action: {filename}", Ansi.YELLOW))
+		return False
+
 	if dry_run:
 		print(colorize(
-			f"Dry Run: Would rename '{filename}' -> '{new_filename}'",
+			"Dry Run: Would rename\n" + format_rename_pair(filename, new_filename),
 			Ansi.YELLOW,
 		))
 	else:
 		start_time = time.time()
-		os.rename(image_path, new_path)
-		write_exif_metadata(new_path, ocr_text, ai_caption)
+		try:
+			os.rename(image_path, new_path)
+		except FileNotFoundError:
+			print(colorize(
+				f"Skipping missing file before rename: {filename}",
+				Ansi.YELLOW,
+			))
+			return False
+		try:
+			write_exif_metadata(new_path, ocr_text, ai_caption)
+		except FileNotFoundError:
+			print(colorize(
+				f"Metadata update skipped; file disappeared: {os.path.basename(new_path)}",
+				Ansi.YELLOW,
+			))
+			return False
 		metadata_time = time.time() - start_time
 		print(colorize(
-			f"Renamed and updated metadata: '{filename}' -> '{new_filename}'",
+			"Renamed and updated metadata:\n" + format_rename_pair(filename, new_filename),
 			Ansi.GREEN,
 		))
 		print(colorize(
 			f"Time taken for renaming and metadata update: {metadata_time:.2f} seconds",
 			Ansi.GREEN,
 		))
+	return True
 
 #============================================
 def process_directory(directory: str):
@@ -355,19 +416,27 @@ def main():
 		))
 
 	durations: List[float] = []
+	skipped: int = 0
 	for i, filename in enumerate(image_files, start=1):
 		image_path = os.path.join(args.directory, filename)
 		print(colorize(f"\nProcessing image {i} of {len(image_files)}", Ansi.CYAN))
 		image_start = time.time()
-		process_image(
+		processed = process_image(
 			image_path,
 			ai_components,
 			args.dry_run,
 			secondary_ai_components,
 		)
 		image_duration = time.time() - image_start
+		if not processed:
+			skipped += 1
+			print(colorize(
+				f"Skipped image {i}: {filename}",
+				Ansi.YELLOW,
+			))
+			continue
 		durations.append(image_duration)
-		avg_duration = sum(durations) / len(durations)
+		avg_duration = sum(durations) / len(durations) if durations else 0.0
 		remaining = len(image_files) - i
 		print(colorize(
 			f"Image {i} completed in {format_duration(image_duration)} "
@@ -391,6 +460,8 @@ def main():
 			f"(avg {format_duration(total_elapsed/len(durations))}).",
 			Ansi.GREEN,
 		))
+	if skipped:
+		print(colorize(f"Skipped {skipped} images (missing/disappeared).", Ansi.YELLOW))
 
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@
 - Silence noisy ViT-GPT2 attention mask warnings during caption generation.
 - Color ETA lines distinctly from other runtime output.
 - Format ETA clock as AM/PM without seconds.
+- Skip screenshots that disappear mid-run instead of crashing.
+- Print rename actions using basenames with a wrapped `->` line for readability.
 
 ## 2025-12-20
 - Refresh README structure and shorten the main overview.
