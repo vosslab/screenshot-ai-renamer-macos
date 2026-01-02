@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import logging
 import time
 from typing import Dict
 
@@ -50,6 +51,12 @@ def _caption_with_vit_gpt2(image_path: str, ai_components: Dict) -> str:
     return caption.strip()
 
 
+def _suppress_transformers_generation_warnings() -> None:
+    """Silence noisy generation warnings that do not affect output quality."""
+    logger = logging.getLogger("transformers.generation.utils")
+    logger.setLevel(logging.ERROR)
+
+
 def generate_caption(image_path: str, ai_components: Dict) -> str:
     """Generate a caption for a given image using the configured backend."""
     backend = ai_components.get("backend", "moondream")
@@ -73,6 +80,7 @@ def setup_ai_components(prompt: str = None, backend: str = "moondream") -> Dict:
     device = common_func.get_mps_device()
 
     if backend == "vit-gpt2":
+        _suppress_transformers_generation_warnings()
         from transformers import GPT2Tokenizer, ViTImageProcessor, VisionEncoderDecoderModel
 
         model_name = "nlpconnect/vit-gpt2-image-captioning"

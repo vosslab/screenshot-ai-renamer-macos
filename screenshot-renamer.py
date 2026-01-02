@@ -5,6 +5,7 @@ import gc
 import os
 import random
 import re
+import sys
 import time
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
@@ -14,6 +15,44 @@ RENAMED_PATTERN = re.compile(
 	r"^screenshot_(\d{4}-\d{2}-\d{2}|unknown-date)-[a-z0-9_-]+\.png$",
 	re.IGNORECASE,
 )
+
+COLOR_ENABLED = True
+
+
+class Ansi:
+	"""ANSI escape codes for color output."""
+
+	RESET = "\033[0m"
+	BOLD = "\033[1m"
+	DIM = "\033[2m"
+	RED = "\033[31m"
+	GREEN = "\033[32m"
+	YELLOW = "\033[33m"
+	BLUE = "\033[34m"
+	MAGENTA = "\033[35m"
+	CYAN = "\033[36m"
+
+
+def colorize(text: str, *styles: str) -> str:
+	"""
+	Wrap text with ANSI styles if color output is enabled.
+	"""
+	if not COLOR_ENABLED:
+		return text
+	return "".join(styles) + text + Ansi.RESET
+
+
+def should_use_color(no_color: bool) -> bool:
+	"""
+	Determine if ANSI color output should be enabled.
+	"""
+	if no_color:
+		return False
+	if os.environ.get("NO_COLOR"):
+		return False
+	if os.environ.get("TERM") == "dumb":
+		return False
+	return sys.stdout.isatty()
 
 
 def clear_gpu_memory():
@@ -120,42 +159,52 @@ def process_image(
 
 	filename = os.path.basename(image_path)
 	print('\n')
-	print('='* 60)
-	print(f"Processing image: {filename}")
+	print(colorize("=" * 60, Ansi.DIM))
+	print(colorize(f"Processing image: {filename}", Ansi.BOLD, Ansi.CYAN))
 
-	print("\nStarting OCR...")
+	print(colorize("\nStarting OCR...", Ansi.YELLOW))
 	start_time = time.time()
 	ocr_text = extract_text_from_image(image_path)
 	ocr_time = time.time() - start_time
-	print(f"OCR Results:\n{format_preview(ocr_text)}")
-	print(f"Time taken for OCR: {ocr_time:.2f} seconds")
+	print(colorize("OCR Results:", Ansi.BLUE))
+	print(format_preview(ocr_text))
+	print(colorize(f"Time taken for OCR: {ocr_time:.2f} seconds", Ansi.GREEN))
 
-	print(f"\nStarting Caption ({ai_components['backend']})...")
+	print(colorize(f"\nStarting Caption ({ai_components['backend']})...", Ansi.YELLOW))
 	start_time = time.time()
 	ai_caption = generate_caption(image_path, ai_components)
 	caption_time = time.time() - start_time
-	print(f"Caption Results:\n{format_preview(ai_caption)}")
-	print(f"Time taken for caption generation: {caption_time:.2f} seconds")
+	print(colorize("Caption Results:", Ansi.BLUE))
+	print(format_preview(ai_caption))
+	print(colorize(f"Time taken for caption generation: {caption_time:.2f} seconds", Ansi.GREEN))
 	captions = [(ai_components["backend"], ai_caption)]
 
 	if secondary_ai_components:
-		print(f"\nStarting Secondary Caption ({secondary_ai_components['backend']})...")
+		print(colorize(
+			f"\nStarting Secondary Caption ({secondary_ai_components['backend']})...",
+			Ansi.YELLOW,
+		))
 		start_time = time.time()
 		secondary_caption = generate_caption(image_path, secondary_ai_components)
 		secondary_time = time.time() - start_time
-		print(f"Secondary Caption Results:\n{format_preview(secondary_caption)}")
-		print(f"Time taken for secondary caption: {secondary_time:.2f} seconds")
+		print(colorize("Secondary Caption Results:", Ansi.BLUE))
+		print(format_preview(secondary_caption))
+		print(colorize(f"Time taken for secondary caption: {secondary_time:.2f} seconds", Ansi.GREEN))
 		captions.append((secondary_ai_components["backend"], secondary_caption))
 
 	clear_gpu_memory()
 
-	print("\nStarting Get AI Filename with LLM...")
+	print(colorize("\nStarting Get AI Filename with LLM...", Ansi.YELLOW))
 	start_time = time.time()
 	caption_payload, model_note = _compose_caption_payload(captions)
 	filename_stub = generate_intelligent_filename(ocr_text, caption_payload, model_note)
 	filename_time = time.time() - start_time
-	print(f"AI Filename Result: {filename_stub}")
-	print(f"Time taken for filename generation: {filename_time:.2f} seconds")
+	print(colorize("AI Filename Result:", Ansi.BLUE))
+	print(colorize(filename_stub, Ansi.BOLD, Ansi.MAGENTA))
+	print(colorize(
+		f"Time taken for filename generation: {filename_time:.2f} seconds",
+		Ansi.GREEN,
+	))
 	clear_gpu_memory()
 
 	# Correctly extract only the date from the filename
@@ -167,14 +216,23 @@ def process_image(
 	new_path = os.path.join(os.path.dirname(image_path), new_filename)
 
 	if dry_run:
-		print(f"Dry Run: Would rename '{filename}' -> '{new_filename}'")
+		print(colorize(
+			f"Dry Run: Would rename '{filename}' -> '{new_filename}'",
+			Ansi.YELLOW,
+		))
 	else:
 		start_time = time.time()
 		os.rename(image_path, new_path)
 		write_exif_metadata(new_path, ocr_text, ai_caption)
 		metadata_time = time.time() - start_time
-		print(f"Renamed and updated metadata: '{filename}' -> '{new_filename}'")
-		print(f"Time taken for renaming and metadata update: {metadata_time:.2f} seconds")
+		print(colorize(
+			f"Renamed and updated metadata: '{filename}' -> '{new_filename}'",
+			Ansi.GREEN,
+		))
+		print(colorize(
+			f"Time taken for renaming and metadata update: {metadata_time:.2f} seconds",
+			Ansi.GREEN,
+		))
 
 #============================================
 def process_directory(directory: str):
@@ -201,9 +259,9 @@ def process_directory(directory: str):
 		image_files.append(filename)
 
 	if not image_files and already_renamed:
-		print("Only already-renamed screenshots found; nothing to do.")
+		print(colorize("Only already-renamed screenshots found; nothing to do.", Ansi.YELLOW))
 	elif not image_files:
-		print("No images found in the specified directory.")
+		print(colorize("No images found in the specified directory.", Ansi.YELLOW))
 
 	return image_files, already_renamed
 
@@ -220,6 +278,8 @@ def parse_args():
 						help="Perform a dry run without modifying files.")
 	parser.add_argument("-t", "--unit-test", dest="unit_test", action="store_true",
 						help="Run a unit test (ask LLM to add two numbers).")
+	parser.add_argument("--no-color", dest="no_color", action="store_true",
+						help="Disable ANSI color output.")
 	parser.add_argument("--caption-prompt", dest="caption_prompt",
 						help="Custom captioning prompt applied to both caption models.")
 	args = parser.parse_args()
@@ -231,6 +291,9 @@ def main():
 	Main function
 	"""
 	args = parse_args()
+
+	global COLOR_ENABLED
+	COLOR_ENABLED = should_use_color(args.no_color)
 
 	if args.unit_test:
 		import sys
@@ -250,18 +313,21 @@ def main():
 	total_files = len(image_files)
 	for i, filename in enumerate(image_files, start=1):
 		if i > 9:
-			print(f"... plus {total_files-9} more files")
+			print(colorize(f"... plus {total_files-9} more files", Ansi.DIM))
 			break
-		print(f"{i}: {filename}")
+		print(colorize(f"{i}: {filename}", Ansi.CYAN))
 
 	if already_renamed:
-		print(f"Skipping {len(already_renamed)} already-renamed files.")
+		print(colorize(
+			f"Skipping {len(already_renamed)} already-renamed files.",
+			Ansi.YELLOW,
+		))
 
 	mode = "Dry run (no changes)" if args.dry_run else "Live rename"
 	summary = f"\nPlan summary: Found {total_files} screenshots in {args.directory}."
 	if already_renamed:
 		summary += f" Skipping {len(already_renamed)} already renamed files."
-	print(f"{summary} {mode}.")
+	print(colorize(f"{summary} {mode}.", Ansi.BOLD))
 
 	try:
 		from tools.generate_caption import setup_ai_components
@@ -283,12 +349,15 @@ def main():
 	else:
 		print(" (ViT-GPT2 unavailable)")
 	if args.caption_prompt:
-		print(f"Custom caption prompt: {format_preview(args.caption_prompt, max_lines=3)}")
+		print(colorize(
+			f"Custom caption prompt: {format_preview(args.caption_prompt, max_lines=3)}",
+			Ansi.BLUE,
+		))
 
 	durations: List[float] = []
 	for i, filename in enumerate(image_files, start=1):
 		image_path = os.path.join(args.directory, filename)
-		print(f"\nProcessing image {i} of {len(image_files)}")
+		print(colorize(f"\nProcessing image {i} of {len(image_files)}", Ansi.CYAN))
 		image_start = time.time()
 		process_image(
 			image_path,
@@ -300,16 +369,28 @@ def main():
 		durations.append(image_duration)
 		avg_duration = sum(durations) / len(durations)
 		remaining = len(image_files) - i
-		print(f"Image {i} completed in {format_duration(image_duration)} (avg {format_duration(avg_duration)}).")
+		print(colorize(
+			f"Image {i} completed in {format_duration(image_duration)} "
+			f"(avg {format_duration(avg_duration)}).",
+			Ansi.GREEN,
+		))
 		if remaining > 0:
 			eta_seconds = avg_duration * remaining
 			eta_time = datetime.now() + timedelta(seconds=eta_seconds)
-			print(f"Estimated completion in {format_duration(eta_seconds)} (~{eta_time.strftime('%H:%M:%S')}).")
+			eta_clock = eta_time.strftime("%I:%M %p").lstrip("0")
+			print(colorize(
+				f"Estimated completion in {format_duration(eta_seconds)} "
+				f"(~{eta_clock}).",
+				Ansi.MAGENTA,
+			))
 
 	total_elapsed = sum(durations)
 	if durations:
-		print(f"\nCompleted {len(durations)} images in {format_duration(total_elapsed)} "
-			  f"(avg {format_duration(total_elapsed/len(durations))}).")
+		print(colorize(
+			f"\nCompleted {len(durations)} images in {format_duration(total_elapsed)} "
+			f"(avg {format_duration(total_elapsed/len(durations))}).",
+			Ansi.GREEN,
+		))
 
 
 if __name__ == "__main__":

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-01-02
+- Add ANSI color output with `--no-color` support for clearer CLI status cues.
+- Silence noisy ViT-GPT2 attention mask warnings during caption generation.
+- Color ETA lines distinctly from other runtime output.
+- Format ETA clock as AM/PM without seconds.
+
 ## 2025-12-20
 - Refresh README structure and shorten the main overview.
 - Add install, usage, and troubleshooting docs.
