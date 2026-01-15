@@ -1,8 +1,9 @@
 # Byte-compiled / optimized / DLL files
 .DS_Store 
 *.png
+ascii_compliance.txt
+pyflakes.txt
 
-__pycache__/
 *.py[cod]
 *$py.class
 

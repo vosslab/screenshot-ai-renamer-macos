@@ -68,7 +68,7 @@ def unit_test():
 	try:
 		ai_answer = int(response.strip())
 	except ValueError:
-		raise RuntimeError(f"Response was not a valid number → {response}")
+		raise RuntimeError(f"Response was not a valid number -> {response}")
 
 	if ai_answer != expected_answer:
 		raise RuntimeError(f"Expected {expected_answer}, but got {ai_answer}")

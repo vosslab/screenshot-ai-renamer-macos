@@ -7,21 +7,21 @@ swap in new models confidently.
 
 ## Flow Overview
 
-1. **Finder** – `screenshot-renamer.py` scans the target directory for macOS
+1. **Finder** - `screenshot-renamer.py` scans the target directory for macOS
    screenshots (`Screen*.png`).
-2. **OCR Agent** – `tools/extract_text.py` runs Tesseract to capture every bit of
+2. **OCR Agent** - `tools/extract_text.py` runs Tesseract to capture every bit of
    on-screen text. Its output is passed unchanged to downstream agents.
-3. **Caption Agents** – `tools/generate_caption.py` loads both backends:
+3. **Caption Agents** - `tools/generate_caption.py` loads both backends:
    - `moondream` excels at context-rich descriptions of UI/visuals.
    - `vit-gpt2` produces literal summaries of visible text and layout.
-4. **Aggregator** – `_compose_caption_payload()` in `screenshot-renamer.py`
+4. **Aggregator** - `_compose_caption_payload()` in `screenshot-renamer.py`
    merges OCR text and all captions, adding a model note that reminds the final
    LLM how to weigh Moondream vs. ViT-GPT2 if both are present.
-5. **Filename Agent** – `tools/intelligent_filename.py` sends the aggregated
+5. **Filename Agent** - `tools/intelligent_filename.py` sends the aggregated
    context to Apple Foundation Models via `tools/config_apple_models.py`,
    enforcing snake_case, 64-character limits, neutral descriptors for people, and
-   “no extension” rules.
-6. **Actions** – The script renames the file and writes EXIF metadata so the new
+   "no extension" rules.
+6. **Actions** - The script renames the file and writes EXIF metadata so the new
    caption + OCR text stay embedded in the image, while the CLI reports per-image
    durations and adjusts the ETA for the remaining queue.
 
@@ -29,11 +29,11 @@ swap in new models confidently.
 
 - **OCR block** is always included verbatim so the filename LLM can reference any
   text that Tesseract saw, even if the caption models missed it.
-- **Caption block** contains one section per backend (e.g., “Moondream caption”
-  and “Vit Gpt2 caption”). This redundancy gives the filename agent richer
+- **Caption block** contains one section per backend (e.g., "Moondream caption"
+  and "Vit Gpt2 caption"). This redundancy gives the filename agent richer
   context for ambiguous screenshots.
-- **Model note** clarifies that “Moondream2 tends to produce richer descriptions
-  while ViT-GPT2 is literal” whenever both are used. Feel free to edit this
+- **Model note** clarifies that "Moondream2 tends to produce richer descriptions
+  while ViT-GPT2 is literal" whenever both are used. Feel free to edit this
   sentence in `_compose_caption_payload()` if you swap models.
 - **Filename instructions** demand snake_case, no extension, and concise intent-
   focused wording. Update `tools/intelligent_filename.py` if you want different
@@ -59,10 +59,10 @@ Models:
   backend and invoking it from `screenshot-renamer.py` alongside the defaults.
 - **Customize prompts** by editing `tools/intelligent_filename.py` or exposing
   new CLI arguments. Anything echoed into the prompt will reach the filename LLM.
-- **Metadata** – if you add extra context, update `tools/update_metadata.py` to
+- **Metadata** - if you add extra context, update `tools/update_metadata.py` to
   embed it so Spotlight / Photos can search for it later.
 
-Keep this file updated whenever the coordination logic changes; it’s the quick
+Keep this file updated whenever the coordination logic changes; it's the quick
 reference for anyone debugging or tuning the agent stack.
 ## Coding Style
 See Python coding style in docs/PYTHON_STYLE.md.
@@ -70,3 +70,9 @@ See Markdown style in docs/MARKDOWN_STYLE.md.
 See repo style in docs/REPO_STYLE.md.
 When making edits, document them in docs/CHANGELOG.md.
 Agents may run programs in the tests folder, including smoke tests and pyflakes/mypy runner scripts.
+When in doubt, implement the changes the user asked for rather than waiting for a response; the user is not the best reader and will likely miss your request and then be confused why it was not implemented or fixed.
+When changing code always run tests, documentation does not require tests.
+
+## Environment
+Codex must run Python using `/opt/homebrew/opt/python@3.12/bin/python3.12` (use Python 3.12 only).
+On this user's macOS (Homebrew Python 3.12), Python modules are installed to `/opt/homebrew/lib/python3.12/site-packages/`.
