@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import os
 import pytesseract  # Heavy import; keep at module level for runtime clarity.
 from PIL import Image
@@ -34,7 +32,3 @@ def process_directory(directory: str):
 			text = extract_text_from_image(image_path)
 			print(f"Extracted text from {filename}:\n{text}\n")
 
-if __name__ == "__main__":
-	directory = os.path.expanduser("~/Desktop")  # Default to Desktop
-	print(f"Processing images in: {directory}")
-	process_directory(directory)
