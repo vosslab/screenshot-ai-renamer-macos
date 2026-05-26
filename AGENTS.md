@@ -12,7 +12,8 @@ swap in new models confidently.
 2. **OCR Agent** - `tools/extract_text.py` runs Tesseract to capture every bit of
    on-screen text. Its output is passed unchanged to downstream agents.
 3. **Caption Agents** - `tools/generate_caption.py` loads both backends:
-   - `moondream` excels at context-rich descriptions of UI/visuals.
+   - `moondream` tracks the latest Moondream model and excels at context-rich
+     descriptions of UI/visuals.
    - `vit-gpt2` produces literal summaries of visible text and layout.
 4. **Aggregator** - `_compose_caption_payload()` in `screenshot-renamer.py`
    merges OCR text and all captions, adding a model note that reminds the final
@@ -32,7 +33,7 @@ swap in new models confidently.
 - **Caption block** contains one section per backend (e.g., "Moondream caption"
   and "Vit Gpt2 caption"). This redundancy gives the filename agent richer
   context for ambiguous screenshots.
-- **Model note** clarifies that "Moondream2 tends to produce richer descriptions
+- **Model note** clarifies that "Moondream tends to produce richer descriptions
   while ViT-GPT2 is literal" whenever both are used. Feel free to edit this
   sentence in `_compose_caption_payload()` if you swap models.
 - **Filename instructions** demand snake_case, no extension, and concise intent-

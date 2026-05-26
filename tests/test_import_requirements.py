@@ -24,6 +24,7 @@ REQUIREMENT_FILES = (
 LOCAL_IMPORT_WHITELIST = {
 }
 IMPORT_REQUIREMENT_ALIASES = {
+	"applefoundationmodels": "apple-foundation-models",
 	"applescript": "py-applescript",
 	"bio": "biopython",
 	"bs4": "beautifulsoup4",
@@ -32,6 +33,7 @@ IMPORT_REQUIREMENT_ALIASES = {
 	"crypto": "pycryptodome",
 	"cv2": "opencv-python",
 	"docx": "python-docx",
+	"exiftool": "pyexiftool",
 	"google": "google-api-python-client",
 	"googleapiclient": "google-api-python-client",
 	"imdb": "IMDbPY",

@@ -147,7 +147,7 @@ def _compose_caption_payload(captions: List[Tuple[str, str]]) -> Tuple[str, Opti
 	model_note = None
 	if {"moondream", "vit-gpt2"}.issubset(backends):
 		model_note = (
-			"In practice Moondream2 tends to produce richer, more context-aware descriptions than "
+			"In practice Moondream tends to produce richer, more context-aware descriptions than "
 			"ViT-GPT2, which is more literal. Blend both perspectives when deciding on the filename."
 		)
 
@@ -239,7 +239,11 @@ def process_image(
 	print(colorize("\nStarting Get AI Filename with LLM...", Ansi.YELLOW))
 	start_time = time.time()
 	caption_payload, model_note = _compose_caption_payload(captions)
-	filename_stub = generate_intelligent_filename(ocr_text, caption_payload, model_note)
+	try:
+		filename_stub = generate_intelligent_filename(ocr_text, caption_payload, model_note)
+	except (RuntimeError, ValueError) as exc:
+		print(colorize(f"Skipping filename generation failure: {exc}", Ansi.YELLOW))
+		return False
 	filename_time = time.time() - start_time
 	print(colorize("AI Filename Result:", Ansi.BLUE))
 	print(colorize(filename_stub, Ansi.BOLD, Ansi.MAGENTA))
@@ -404,7 +408,7 @@ def main():
 		print(f"Failed to load ViT-GPT2 backend: {exc}")
 		secondary_ai_components = None
 
-	print("\nCaption backends: Moondream2", end="")
+	print("\nCaption backends: Moondream", end="")
 	if secondary_ai_components:
 		print(" + ViT-GPT2")
 	else:

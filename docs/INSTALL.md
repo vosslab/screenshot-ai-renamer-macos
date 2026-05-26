@@ -2,7 +2,7 @@
 
 ## Requirements
 - Apple Silicon (arm64) on macOS 26.0 or newer with Apple Intelligence enabled.
-- Python 3.9 or newer.
+- Python 3.12.
 - Xcode command line tools (`xcode-select --install`).
 - Homebrew.
 
@@ -17,6 +17,14 @@ The Brewfile installs `exiftool`, `tesseract`, and `vips`.
 ```bash
 pip install -r pip_requirements.txt
 ```
+
+## Moondream setup
+```bash
+./install_moondream.py
+```
+
+This installs the Python dependency set and preloads the latest Moondream model
+from Hugging Face.
 
 ## Verify Apple Intelligence
 ```bash
