@@ -138,8 +138,9 @@ cython_debug/
 #.idea/
 # PyPI configuration file
 .pypirc
-report_shebang.txt
-report_pyflakes.txt
-report_bandit.txt
-report_pyright.txt
-report_ascii_compliance.txt
+
+# === UNIVERSAL ===
+report_*.txt
+_temp*.?*
+
+
