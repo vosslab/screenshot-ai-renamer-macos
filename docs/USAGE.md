@@ -26,7 +26,8 @@ Prints proposed filenames without modifying files.
 
 ## Install note
 Python dependencies are listed in `pip_requirements.txt`. Run `./install_moondream.py`
-after dependency changes to install the Moondream stack and preload the latest model.
+after dependency changes to install the Moondream stack and preload the local
+model for the active device.
 
 ## Command-line options
 ```

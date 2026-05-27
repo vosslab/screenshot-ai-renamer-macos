@@ -8,6 +8,7 @@ import PIL.Image
 from tools import common_func
 
 MOONDREAM_MODEL_ID = "moondream/moondream3-preview"
+MOONDREAM_MPS_MODEL_ID = "vikhyatk/moondream2"
 VIT_GPT2_MODEL_ID = "nlpconnect/vit-gpt2-image-captioning"
 VIT_PROCESSOR_MODEL_ID = "google/vit-base-patch16-224-in21k"
 GPT2_TOKENIZER_MODEL_ID = "gpt2"
@@ -69,6 +70,42 @@ def _suppress_transformers_generation_warnings() -> None:
 
 
 #============================================
+def _resolve_moondream_model_id(device: str) -> str:
+	"""
+	Choose the newest Moondream model compatible with the active local device.
+	"""
+	if device == "mps":
+		return MOONDREAM_MPS_MODEL_ID
+	return MOONDREAM_MODEL_ID
+
+
+#============================================
+def _resolve_moondream_device(device: str) -> str:
+	"""
+	Choose a stable local device for Moondream inference.
+	"""
+	return device
+
+
+#============================================
+def _install_moondream2_transformers_shim() -> None:
+	"""
+	Add the tied-weights attribute expected by Transformers 5.
+	"""
+	if hasattr(transformers.PreTrainedModel, "all_tied_weights_keys"):
+		return
+
+	def all_tied_weights_keys(model):
+		tied_keys = getattr(model, "_tied_weights_keys", None) or []
+		if isinstance(tied_keys, dict):
+			return tied_keys
+		key_map = {key: key for key in tied_keys}
+		return key_map
+
+	transformers.PreTrainedModel.all_tied_weights_keys = property(all_tied_weights_keys)
+
+
+#============================================
 def generate_caption(image_path: str, ai_components: dict) -> str:
 	"""Generate a caption for a given image using the configured backend."""
 	backend = ai_components.get("backend", "moondream")
@@ -110,18 +147,25 @@ def setup_ai_components(prompt: str = None, backend: str = "moondream") -> dict:
 		}
 		return components
 
-	model = transformers.AutoModelForCausalLM.from_pretrained(
-		MOONDREAM_MODEL_ID,
-		trust_remote_code=True,
-		dtype=torch.float16,
-		device_map={"": device},
-	)  # nosec B615
-	model.to(device)
+	model_id = _resolve_moondream_model_id(device)
+	if model_id == MOONDREAM_MPS_MODEL_ID:
+		_install_moondream2_transformers_shim()
+	moondream_device = _resolve_moondream_device(device)
+	dtype = torch.float16 if moondream_device == "mps" else torch.bfloat16
+	model_args = {
+		"trust_remote_code": True,
+		"dtype": dtype,
+	}
+	if moondream_device != "cpu":
+		model_args["device_map"] = {"": moondream_device}
+	model = transformers.AutoModelForCausalLM.from_pretrained(model_id, **model_args)  # nosec B615
+	model.to(moondream_device)
 
 	components = {
 		"backend": "moondream",
+		"model_id": model_id,
 		"model": model,
-		"device": device,
+		"device": moondream_device,
 		"prompt": prompt,
 		"max_dimension": 720,
 	}

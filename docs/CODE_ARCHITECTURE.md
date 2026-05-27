@@ -19,13 +19,13 @@ repo root, and developer automation lives in [tests/](../tests/) and
   discovery, dry-run/live mode handling, progress output, ETA reporting, and
   per-image processing.
 - [install_moondream.py](../install_moondream.py): installs the runtime
-  dependency set and preloads the latest Moondream model into the local Hugging
-  Face cache.
+  dependency set and preloads the local Moondream model selected for the active
+  device.
 - [tools/extract_text.py](../tools/extract_text.py): opens images with Pillow
   and extracts text through Tesseract via `pytesseract`.
 - [tools/generate_caption.py](../tools/generate_caption.py): loads caption
-  backends with Transformers. The primary backend is the latest Moondream model;
-  the secondary backend is ViT-GPT2.
+  backends with Transformers. The primary backend is Moondream, selected by
+  active device compatibility; the secondary backend is ViT-GPT2.
 - [tools/intelligent_filename.py](../tools/intelligent_filename.py): builds the
   filename prompt, trims OCR/caption context, validates Apple model output, and
   returns a sanitized PNG filename.
@@ -91,6 +91,6 @@ repo root, and developer automation lives in [tests/](../tests/) and
 
 ## Known gaps
 
-- Verify latest Moondream memory use and latency on the target Mac after upstream
-  model changes, because the project intentionally tracks current upstream
-  models rather than pinned revisions.
+- Verify Moondream memory use and latency on the target Mac after upstream model
+  changes, because the project intentionally tracks current upstream packages and
+  unpinned model revisions.

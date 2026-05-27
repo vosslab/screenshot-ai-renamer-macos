@@ -5,4 +5,4 @@ pyexiftool
 pytesseract
 pyvips
 torch
-transformers
+transformers>=4.51,<5

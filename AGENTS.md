@@ -12,8 +12,9 @@ swap in new models confidently.
 2. **OCR Agent** - `tools/extract_text.py` runs Tesseract to capture every bit of
    on-screen text. Its output is passed unchanged to downstream agents.
 3. **Caption Agents** - `tools/generate_caption.py` loads both backends:
-   - `moondream` tracks the latest Moondream model and excels at context-rich
-     descriptions of UI/visuals.
+   - `moondream` uses the newest local Moondream model compatible with the active
+     device. Apple MPS uses Moondream2 because Moondream3 Preview's Transformers
+     path requires FlexAttention, which is not supported on MPS.
    - `vit-gpt2` produces literal summaries of visible text and layout.
 4. **Aggregator** - `_compose_caption_payload()` in `screenshot-renamer.py`
    merges OCR text and all captions, adding a model note that reminds the final

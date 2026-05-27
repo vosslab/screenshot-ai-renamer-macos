@@ -23,8 +23,11 @@ pip install -r pip_requirements.txt
 ./install_moondream.py
 ```
 
-This installs the Python dependency set and preloads the latest Moondream model
-from Hugging Face.
+This installs the Python dependency set and preloads the newest local Moondream
+model compatible with the active device. Apple MPS uses Moondream2 with
+Transformers 4.x because the current Transformers 5 path is broken for
+Moondream on MPS, and Moondream3 Preview requires FlexAttention, which is not
+supported on MPS.
 
 ## Verify Apple Intelligence
 ```bash

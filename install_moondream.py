@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Install and preload the latest Moondream caption backend.
+Install and preload the local Moondream caption backend.
 """
 
 import argparse
@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
 	Parse command-line arguments.
 	"""
 	parser = argparse.ArgumentParser(
-		description="Install dependencies and preload the latest Moondream model."
+		description="Install dependencies and preload the local Moondream model."
 	)
 	parser.add_argument(
 		'-s', '--skip-pip',
@@ -58,15 +58,15 @@ def install_dependencies() -> None:
 #============================================
 def preload_moondream() -> None:
 	"""
-	Download and instantiate the latest Moondream model.
+	Download and instantiate the local Moondream model for the active device.
 	"""
 	import tools.generate_caption
 
 	print("Downloading model files from Hugging Face if needed.")
 	print("Caption inference runs locally after the files are cached.")
-	print("Preloading latest Moondream model...")
+	print("Preloading local Moondream model for the active device...")
 	components = tools.generate_caption.setup_ai_components(backend="moondream")
-	model_id = tools.generate_caption.MOONDREAM_MODEL_ID
+	model_id = components["model_id"]
 	print(f"Moondream ready: {model_id}")
 	del components
 

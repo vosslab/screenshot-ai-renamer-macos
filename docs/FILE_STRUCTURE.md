@@ -12,7 +12,7 @@
 - [README.md](../README.md): short project overview, quick start, and core
   documentation links.
 - [install_moondream.py](../install_moondream.py): installs runtime Python
-  dependencies and preloads the latest Moondream model.
+  dependencies and preloads the local Moondream model for the active device.
 - [pip_requirements.txt](../pip_requirements.txt): runtime Python dependencies.
 - [pip_requirements-dev.txt](../pip_requirements-dev.txt): developer and test
   dependencies.
