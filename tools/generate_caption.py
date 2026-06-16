@@ -95,7 +95,7 @@ def _install_moondream2_transformers_shim() -> None:
 	if hasattr(transformers.PreTrainedModel, "all_tied_weights_keys"):
 		return
 
-	def all_tied_weights_keys(model):
+	def all_tied_weights_keys(model: object) -> dict:
 		tied_keys = getattr(model, "_tied_weights_keys", None) or []
 		if isinstance(tied_keys, dict):
 			return tied_keys

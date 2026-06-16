@@ -62,17 +62,21 @@ repo root, and developer automation lives in [tests/](../tests/) and
 
 - Fast repo checks run with:
   ```bash
-  /opt/homebrew/opt/python@3.12/bin/python3.12 -m pytest tests/
+  source source_me.sh && pytest tests/
   ```
-- [tests/test_import_requirements.py](../tests/test_import_requirements.py)
-  checks Python imports against runtime and developer dependency manifests.
+- [tests/test_function_typing.py](../tests/test_function_typing.py) enforces
+  type annotations repo-wide using builtin generics and PEP 604 unions.
 - [tests/test_bandit_security.py](../tests/test_bandit_security.py) runs Bandit
   at medium severity or higher.
 - [tests/test_pyflakes_code_lint.py](../tests/test_pyflakes_code_lint.py),
-  [tests/test_indentation.py](../tests/test_indentation.py), and related hygiene
-  tests enforce the repo's Python style and file conventions.
-- Focused filename tests verify that Apple Foundation Models error text is
-  rejected instead of being accepted as a filename.
+  [tests/test_indentation.py](../tests/test_indentation.py),
+  [tests/test_whitespace.py](../tests/test_whitespace.py),
+  [tests/test_ascii_compliance.py](../tests/test_ascii_compliance.py),
+  [tests/test_import_dot.py](../tests/test_import_dot.py),
+  [tests/test_import_star.py](../tests/test_import_star.py),
+  [tests/test_shebangs.py](../tests/test_shebangs.py), and
+  [tests/test_markdown_links.py](../tests/test_markdown_links.py) enforce the
+  repo's Python style, import rules, and file conventions.
 
 ## Extension points
 

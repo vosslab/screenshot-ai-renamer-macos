@@ -8,7 +8,6 @@ import re
 import sys
 import time
 from datetime import datetime, timedelta
-from typing import List, Optional, Tuple
 
 
 RENAMED_PATTERN = re.compile(
@@ -17,6 +16,12 @@ RENAMED_PATTERN = re.compile(
 )
 
 COLOR_ENABLED = True
+
+# Screenshots below this dimension are accidental click-drag captures,
+# not real content, so they are skipped before any vision model runs.
+MIN_IMAGE_DIMENSION = 16
+# Below this dimension the capture is pure garbage and is deleted.
+DELETE_IMAGE_DIMENSION = 4
 
 
 class Ansi:
@@ -55,7 +60,7 @@ def should_use_color(no_color: bool) -> bool:
 	return sys.stdout.isatty()
 
 
-def clear_gpu_memory():
+def clear_gpu_memory() -> None:
 	"""Forcefully clears GPU memory after processing an image to prevent out-of-memory errors."""
 	import torch  # Lazy import to avoid slowing CLI help.
 
@@ -127,7 +132,7 @@ def format_rename_pair(old_path: str, new_path: str) -> str:
 	return f"'{old_name}'\n    -> '{new_name}'"
 
 
-def _compose_caption_payload(captions: List[Tuple[str, str]]) -> Tuple[str, Optional[str]]:
+def _compose_caption_payload(captions: list[tuple[str, str]]) -> tuple[str, str | None]:
 	"""
 	Combine multiple captions into a single blob for the filename LLM.
 
@@ -154,11 +159,20 @@ def _compose_caption_payload(captions: List[Tuple[str, str]]) -> Tuple[str, Opti
 	return "\n\n".join(parts), model_note
 
 
+def get_image_size(image_path: str) -> tuple[int, int]:
+	"""Return (width, height) in pixels for an image file."""
+	import PIL.Image  # Lazy import to keep CLI help fast.
+
+	with PIL.Image.open(image_path) as image:
+		width, height = image.size
+	return width, height
+
+
 def process_image(
 	image_path: str,
 	ai_components: dict,
 	dry_run: bool,
-	secondary_ai_components: Optional[dict] = None,
+	secondary_ai_components: dict | None = None,
 )-> bool:
 	"""
 	Processes a single image: extracts text, generates captions, renames file, and updates metadata.
@@ -187,6 +201,27 @@ def process_image(
 		return False
 	if not os.path.exists(image_path):
 		print(colorize(f"Skipping missing file: {filename}", Ansi.YELLOW))
+		return False
+
+	width, height = get_image_size(image_path)
+	if min(width, height) < DELETE_IMAGE_DIMENSION:
+		if dry_run:
+			print(colorize(
+				f"Dry Run: Would delete tiny capture ({width}x{height}): {filename}",
+				Ansi.YELLOW,
+			))
+		else:
+			os.remove(image_path)
+			print(colorize(
+				f"Deleted tiny capture ({width}x{height}): {filename}",
+				Ansi.RED,
+			))
+		return False
+	if min(width, height) < MIN_IMAGE_DIMENSION:
+		print(colorize(
+			f"Skipping tiny capture ({width}x{height}): {filename}",
+			Ansi.YELLOW,
+		))
 		return False
 
 	print(colorize("\nStarting OCR...", Ansi.YELLOW))
@@ -300,7 +335,7 @@ def process_image(
 	return True
 
 #============================================
-def process_directory(directory: str):
+def process_directory(directory: str) -> tuple[list[str], list[str]]:
 	"""
 	Collect all screenshot-style PNGs in the specified directory.
 
@@ -331,7 +366,7 @@ def process_directory(directory: str):
 	return image_files, already_renamed
 
 #============================================
-def parse_args():
+def parse_args() -> argparse.Namespace:
 	"""
 	Parse command-line arguments.
 	"""
@@ -351,7 +386,7 @@ def parse_args():
 	return args
 
 #============================================
-def main():
+def main() -> None:
 	"""
 	Main function
 	"""
@@ -419,7 +454,7 @@ def main():
 			Ansi.BLUE,
 		))
 
-	durations: List[float] = []
+	durations: list[float] = []
 	skipped: int = 0
 	for i, filename in enumerate(image_files, start=1):
 		image_path = os.path.join(args.directory, filename)

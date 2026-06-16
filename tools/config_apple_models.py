@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import platform
 import time
-from typing import Tuple
 
 from applefoundationmodels import Session, apple_intelligence_available
 
@@ -18,7 +17,7 @@ from applefoundationmodels import Session, apple_intelligence_available
 MIN_MACOS_MAJOR = 26
 
 
-def _parse_macos_version() -> Tuple[int, int, int]:
+def _parse_macos_version() -> tuple[int, int, int]:
 	"""Return the macOS version as a tuple (major, minor, patch)."""
 	version_str = platform.mac_ver()[0]
 	parts = [int(p) for p in version_str.split(".") if p.isdigit()]
@@ -29,7 +28,7 @@ def _parse_macos_version() -> Tuple[int, int, int]:
 	return 0, 0, 0
 
 
-def _require_apple_intelligence():
+def _require_apple_intelligence() -> None:
 	"""Validate architecture, OS version, and Apple Intelligence availability."""
 	arch = platform.machine().lower()
 	if arch != "arm64":
@@ -50,7 +49,7 @@ def _require_apple_intelligence():
 		raise RuntimeError(str(reason))
 
 
-def unit_test():
+def unit_test() -> None:
 	"""Simple unit test for the Apple Foundation Models backend."""
 	import random
 

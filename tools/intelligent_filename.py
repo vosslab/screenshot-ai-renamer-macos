@@ -114,7 +114,7 @@ def generate_intelligent_filename(
 
 
 #============================================
-def main():
+def main() -> None:
 	"""Main function for standalone execution and unit testing."""
 	parser = argparse.ArgumentParser(description="Generate intelligent filenames for images.")
 	parser.add_argument(

@@ -23,7 +23,7 @@ def repo_root() -> str:
 
 
 #============================================
-def pytest_addoption(parser) -> None:
+def pytest_addoption(parser: pytest.Parser) -> None:
 	"""
 	Add repo hygiene options.
 	"""
@@ -46,7 +46,7 @@ def skip_repo_hygiene() -> bool:
 
 #============================================
 @pytest.fixture
-def ascii_fix_enabled(request) -> bool:
+def ascii_fix_enabled(request: pytest.FixtureRequest) -> bool:
 	"""
 	Check whether ASCII compliance auto-fix is enabled.
 	"""

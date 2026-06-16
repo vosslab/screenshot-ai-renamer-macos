@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-06-16
+
+### Behavior or Interface Changes
+- Skip screenshots whose smaller dimension is under 16 px, since they are accidental click-drag captures with no usable content.
+- Hard delete captures whose smaller dimension is under 4 px (respecting `--dry-run`), as they are pure garbage.
+
+### Fixes and Maintenance
+- Fix a crash where a 2x1 px screenshot reached the ViT-GPT2 backend and raised `ValueError: mean must have 1 elements if it is an iterable, got 3`; the size guard now stops degenerate images before any vision model runs.
+- Add the missing type annotations flagged by `tests/test_function_typing.py` across `screenshot-renamer.py`, `tests/conftest.py`, and the `tools/` modules; replace `typing` imports with builtin generics and PEP 604 unions.
+- Refresh `docs/CODE_ARCHITECTURE.md` and `docs/FILE_STRUCTURE.md` to match the current test layout, dropping the removed `tests/test_import_requirements.py` reference and the hardcoded interpreter path.
+
 ## 2026-05-26
 - Add `docs/CODE_ARCHITECTURE.md` and refresh `docs/FILE_STRUCTURE.md` from the current repo layout.
 - Remove dependency and model revision pins so installs track current upstream packages and models.

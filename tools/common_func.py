@@ -4,7 +4,7 @@ import torch
 from PIL import Image
 
 #============================================
-def get_mps_device():
+def get_mps_device() -> str:
 	"""
 	Detects the best available device for computation.
 	Returns "mps" for Apple Silicon, "cuda" for NVIDIA, or "cpu" as fallback.
@@ -44,7 +44,7 @@ def resize_image(image: Image.Image, max_dimension: int) -> Image.Image:
 	return image.resize((new_width, new_height), resample_filter)
 
 #============================================
-def get_attention_mask(pixel_values, device: str):
+def get_attention_mask(pixel_values: torch.Tensor, device: str) -> torch.Tensor:
 	"""
 	Create an attention mask matching the pixel tensor size for encoder-decoder models.
 
@@ -58,7 +58,7 @@ def get_attention_mask(pixel_values, device: str):
 	return torch.ones(pixel_values.shape[:2], dtype=torch.long, device=device)
 
 #============================================
-def get_image_paths(directory: str):
+def get_image_paths(directory: str) -> list[str]:
 	"""
 	Returns a list of image file paths in a directory.
 

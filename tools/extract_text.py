@@ -16,7 +16,7 @@ def extract_text_from_image(image_path: str) -> str:
 	text = pytesseract.image_to_string(image)
 	return text.strip()
 
-def process_directory(directory: str):
+def process_directory(directory: str) -> None:
 	"""
 	Process all images in a directory and extract text.
 

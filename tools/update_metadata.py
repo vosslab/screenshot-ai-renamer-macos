@@ -1,7 +1,7 @@
 import exiftool
 
 #============================================
-def write_exif_metadata(image_path: str, ocr_text: str, ai_caption: str):
+def write_exif_metadata(image_path: str, ocr_text: str, ai_caption: str) -> None:
 	"""
 	Writes OCR text and AI captions to EXIF metadata, overwriting the original file.
 

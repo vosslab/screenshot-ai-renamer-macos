@@ -17,6 +17,10 @@
 - [pip_requirements-dev.txt](../pip_requirements-dev.txt): developer and test
   dependencies.
 - [screenshot-renamer.py](../screenshot-renamer.py): main CLI entry point.
+- [source_me.sh](../source_me.sh): shell bootstrap that sets up the Python
+  environment for repo-local commands.
+- [REPO_TYPE](../REPO_TYPE): project type marker used by style propagation.
+- [VERSION](../VERSION): single-source version string, synced with packaging.
 - [docs/](.): durable project documentation and style guides.
 - [tools/](../tools/): OCR, captioning, filename, Apple model, metadata, and
   shared image helpers.
@@ -44,19 +48,31 @@
 
 - [tests/conftest.py](../tests/conftest.py): pytest fixtures and repo hygiene
   options.
-- [tests/git_file_utils.py](../tests/git_file_utils.py): shared git-root and
-  tracked-file helpers for tests.
-- [tests/test_import_requirements.py](../tests/test_import_requirements.py):
-  import-to-requirements validation.
+- [tests/file_utils.py](../tests/file_utils.py): shared git-root and
+  tracked-file discovery helpers for tests.
+- [tests/test_function_typing.py](../tests/test_function_typing.py): type
+  annotation gate (builtin generics and PEP 604 unions, no `typing`).
 - [tests/test_bandit_security.py](../tests/test_bandit_security.py): Bandit
   security gate.
 - [tests/test_pyflakes_code_lint.py](../tests/test_pyflakes_code_lint.py):
   pyflakes gate.
+- [tests/test_import_dot.py](../tests/test_import_dot.py) and
+  [tests/test_import_star.py](../tests/test_import_star.py): import-style gates.
 - [tests/test_indentation.py](../tests/test_indentation.py),
   [tests/test_whitespace.py](../tests/test_whitespace.py), and
   [tests/test_ascii_compliance.py](../tests/test_ascii_compliance.py): file
   hygiene checks.
-- Focused filename tests: filename response validation checks.
+- [tests/test_markdown_links.py](../tests/test_markdown_links.py),
+  [tests/test_shebangs.py](../tests/test_shebangs.py),
+  [tests/test_init_files.py](../tests/test_init_files.py),
+  [tests/test_pytest_hygiene.py](../tests/test_pytest_hygiene.py),
+  [tests/test_readme_first_paragraph.py](../tests/test_readme_first_paragraph.py),
+  and [tests/test_test_naming_conventions.py](../tests/test_test_naming_conventions.py):
+  documentation, shebang, and test-layout gates.
+- [tests/check_ascii_compliance.py](../tests/check_ascii_compliance.py),
+  [tests/fix_ascii_compliance.py](../tests/fix_ascii_compliance.py), and
+  [tests/fix_whitespace.py](../tests/fix_whitespace.py): single-file ASCII and
+  whitespace check/fix helpers.
 - [tests/TESTS_README.md](../tests/TESTS_README.md): test layout and execution
   notes.
 
@@ -74,6 +90,9 @@
 - [devel/submit_to_pypi.py](../devel/submit_to_pypi.py): package publishing
   helper.
 - [devel/dist_clean.sh](../devel/dist_clean.sh): distribution cleanup helper.
+- [devel/flatten_broken_md_links.py](../devel/flatten_broken_md_links.py):
+  helper that repairs broken local Markdown links.
+- [devel/DEVEL_README.md](../devel/DEVEL_README.md): developer tooling notes.
 
 ## Generated artifacts
 
