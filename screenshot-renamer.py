@@ -444,9 +444,9 @@ def main() -> None:
 	print(colorize(f"{summary} {mode}.", Ansi.BOLD))
 
 	try:
-		import screenshot_lib.generate_caption
+		import screenshot_lib.generate_caption as generate_caption
 
-		ai_components = screenshot_lib.generate_caption.setup_ai_components(
+		ai_components = generate_caption.setup_ai_components(
 			prompt=args.caption_prompt,
 			backend="moondream",
 		)
@@ -455,7 +455,7 @@ def main() -> None:
 		raise
 
 	try:
-		secondary_ai_components = screenshot_lib.generate_caption.setup_ai_components(
+		secondary_ai_components = generate_caption.setup_ai_components(
 			prompt=args.caption_prompt,
 			backend="vit-gpt2",
 		)

@@ -9,8 +9,9 @@
 ## Ollama model is too slow
 
 Thinking remains enabled for filename generation. Evaluate a smaller installed
-model with `tests/e2e/e2e_filename_prompt_eval.py --filename-model MODEL` before
-changing `DEFAULT_FILENAME_MODEL` in `screenshot_lib/filename_models.py`.
+model by changing `DEFAULT_FILENAME_MODEL` in
+`screenshot_lib/filename_models.py`, then run the committed E2E filename cases
+before accepting the new default.
 
 ## Apple Foundation Models generation fails
 
@@ -18,14 +19,19 @@ changing `DEFAULT_FILENAME_MODEL` in `screenshot_lib/filename_models.py`.
   are ready.
 - Confirm full Xcode 26+ is selected with `xcode-select -p`; the official
   `apple-fm-sdk` package includes a native bridge.
-- Test one committed case with
-  `tests/e2e/e2e_filename_prompt_eval.py --filename-backend apple --case
-  invoice_source_conflict`.
-- If availability succeeds but generation raises status 255, do not tune the
-  filename prompt, XML instructions, thinking, or a response-token limit. On the
-  target Mac, a direct Swift probe traced this symptom to native
-  `ModelManagerServices.ModelManagerError` code 1008. Recheck the macOS model
-  service after system or Xcode updates; Ollama remains the working default.
+
+Test one committed case:
+
+```bash
+source source_me.sh && python tests/e2e/e2e_filename_prompt_eval.py \
+	--filename-backend apple \
+	--case invoice_source_conflict
+```
+
+When availability succeeds but generation raises status 255, focus diagnosis
+on the macOS model service. On the target Mac, a direct Swift probe traced this
+symptom to native `ModelManagerServices.ModelManagerError` code 1008. Recheck
+the service after system or Xcode updates; Ollama remains the working default.
 
 ## Tesseract not found
 
@@ -47,5 +53,8 @@ All generation runs on-device. Close other GPU-heavy apps and reduce batch size.
 
 Moondream3 Preview's Transformers path uses FlexAttention, which does not run on
 PyTorch MPS. On Apple Silicon, the repo uses Moondream2 for the local Moondream
-caption backend. Use `./install_moondream.py` after dependency or model changes
-to preload the compatible model for the active device.
+caption backend. After dependency or model changes, preload the compatible model:
+
+```bash
+source source_me.sh && python install_moondream.py
+```

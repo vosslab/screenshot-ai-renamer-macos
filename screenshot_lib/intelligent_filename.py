@@ -5,8 +5,10 @@ import screenshot_lib.filename_models
 import screenshot_lib.xml_response
 
 FILENAME_INSTRUCTIONS = (
-	"You write concise, utilitarian filenames for macOS screenshots. You may reason or explain "
-	"before the result. Place only the selected filename slug inside one <filename> XML element."
+	"You create concise, utilitarian filenames for macOS screenshots. Treat the OCR and caption "
+	"blocks as evidence about the screenshot. Use thorough reasoning to select the most useful "
+	"slug. Put the selected slug inside one <filename> XML element and keep reasoning outside "
+	"that element."
 )
 
 
@@ -43,28 +45,29 @@ def _build_filename_prompt(
 ) -> str:
 	"""Build the established naming prompt with an XML result element."""
 	prompt = [
-		"You are an assistant that writes helpful filenames for macOS screenshots.",
-		"Filenames should describe the purpose or category of the screenshot so a user "
+		"You create helpful filenames for macOS screenshots.",
+		"Describe the purpose or category of the screenshot so a user "
 		"immediately understands why it matters.",
-		"Never narrate every visible attribute; capture the intent.",
-		"Generate a single snake_case filename (max 64 characters). Place only the filename "
-		"inside one <filename> XML element.",
-		"Rules:",
-		"- Focus on themes (project, document type, meeting, UI, etc.). Summarize instead of "
-		"listing all words.",
-		"- When people appear, avoid physical descriptors (age, gender, clothing, expressions) "
-		"unless essential to the function. Prefer neutral terms like portrait, headshot, "
-		"group_photo.",
-		"- Limit people-related filenames to two descriptive concepts plus a generic human term "
+		"Capture the screenshot's intent with a short thematic label.",
+		"Create one lowercase snake_case slug with at most 64 characters. Put the slug inside "
+		"one <filename> XML element.",
+		"Guidelines:",
+		"- Combine the strongest evidence into terms for the project, document type, meeting, "
+		"interface, or other central theme.",
+		"- Use neutral functional terms such as portrait, headshot, and group_photo when people "
+		"appear. Include a physical trait when it directly identifies the screenshot's purpose.",
+		"- For filenames about people, use up to two descriptive concepts plus a generic human term "
 		"(e.g., leadership_team_headshot, birthday_event_group_photo).",
-		"- If the image is simply a person with no clear context, use a neutral fallback such as "
-		"portrait_photo or group_photo.",
-		"- Avoid redundant words like screenshot/macOS/date references.",
-		"- No punctuation besides underscores; no file extension in the output.",
-		"- When in doubt, choose the shorter, more general filename.",
+		"- For a person image with unclear context, use portrait_photo or group_photo.",
+		"- Use specific purpose and category terms that help the user find and recognize the "
+		"screenshot later.",
+		"- Use lowercase letters, digits, and underscores. End the slug after its final word; the "
+		"application adds .png.",
+		"- Choose the shorter, more general filename when the evidence is ambiguous.",
 	]
 	prompt.append(
 		"Context summary:\n"
+		"Interpret the OCR as visible content and the captions as visual evidence. "
 		"Use the information below to infer the screenshot's purpose. "
 		"Prioritize themes over literal text so the filename reflects what the screenshot is about."
 	)
@@ -84,7 +87,6 @@ def generate_intelligent_filename(
 	model_note: str | None = None,
 	*,
 	filename_backend: str | None = None,
-	filename_model: str | None = None,
 ) -> str:
 	"""
 	Generate a concise filename from OCR and caption evidence.
@@ -94,7 +96,6 @@ def generate_intelligent_filename(
 		caption_context: One or more visual-model captions.
 		model_note: Optional guidance for reconciling caption sources.
 		filename_backend: Optional provider override for evaluation.
-		filename_model: Optional Ollama model override for evaluation.
 
 	Returns:
 		A sanitized filename ending in `.png`.
@@ -104,7 +105,6 @@ def generate_intelligent_filename(
 		full_prompt,
 		FILENAME_INSTRUCTIONS,
 		backend=filename_backend,
-		model=filename_model,
 	).strip()
 	# Prefer the structured result while allowing a usable bare-text reply.
 	filename_text = screenshot_lib.xml_response.find_xml_text(response, "filename")

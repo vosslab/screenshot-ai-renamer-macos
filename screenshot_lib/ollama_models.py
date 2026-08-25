@@ -52,7 +52,8 @@ def run_ollama_model(
 		)
 	elapsed = time.time() - start_time
 	print(f"Ollama model {model} completed in {elapsed:.2f} seconds")
-	return content.strip()
+	cleaned_content = content.strip()
+	return cleaned_content
 
 
 #============================================

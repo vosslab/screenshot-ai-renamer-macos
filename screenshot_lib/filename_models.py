@@ -22,7 +22,10 @@ def normalize_filename_backend(backend: str | None) -> str:
 	Returns:
 		A normalized provider name.
 	"""
-	resolved_backend = DEFAULT_FILENAME_BACKEND if backend is None else backend.strip().lower()
+	if backend is None:
+		resolved_backend = DEFAULT_FILENAME_BACKEND
+	else:
+		resolved_backend = backend.strip().lower()
 	if resolved_backend not in SUPPORTED_FILENAME_BACKENDS:
 		choices = ", ".join(SUPPORTED_FILENAME_BACKENDS)
 		raise ValueError(f"Unknown filename backend '{resolved_backend}'. Choose from: {choices}.")
@@ -30,44 +33,24 @@ def normalize_filename_backend(backend: str | None) -> str:
 
 
 #============================================
-def resolve_ollama_model(model: str | None) -> str:
-	"""Resolve the installed Ollama model used for filename generation."""
-	if model is None:
-		return DEFAULT_FILENAME_MODEL
-	model_name = model.strip()
-	if not model_name:
-		raise ValueError("The filename model name cannot be empty.")
-	return model_name
-
-
-#============================================
-def _validate_model_override(backend: str, model: str | None) -> None:
-	"""Reject model names for providers whose model is selected by the OS."""
-	if backend == APPLE_FILENAME_BACKEND and model is not None:
-		raise ValueError("Apple Foundation Models uses the system model and accepts no model name.")
-
-
-#============================================
 def describe_filename_model(
 	backend: str | None = None,
-	model: str | None = None,
 ) -> str:
 	"""
 	Return a concise human-readable filename model description.
 
 	Args:
 		backend: Optional provider override.
-		model: Optional Ollama model override.
 
 	Returns:
 		A model description for CLI status output.
 	"""
 	resolved_backend = normalize_filename_backend(backend)
-	_validate_model_override(resolved_backend, model)
 	if resolved_backend == APPLE_FILENAME_BACKEND:
-		return "Apple Foundation Models (official apple-fm-sdk)"
-	resolved_model = resolve_ollama_model(model)
-	return f"Ollama {resolved_model} (thinking enabled)"
+		description = "Apple Foundation Models (official apple-fm-sdk)"
+	else:
+		description = f"Ollama {DEFAULT_FILENAME_MODEL} (thinking enabled)"
+	return description
 
 
 #============================================
@@ -76,7 +59,6 @@ def run_filename_model(
 	instructions: str,
 	*,
 	backend: str | None = None,
-	model: str | None = None,
 ) -> str:
 	"""
 	Run the configured filename model through its provider adapter.
@@ -85,43 +67,39 @@ def run_filename_model(
 		prompt: Filename task and screenshot evidence.
 		instructions: Stable system instructions for the filename task.
 		backend: Optional provider override.
-		model: Optional Ollama model override.
 
 	Returns:
 		The model's complete response text.
 	"""
 	resolved_backend = normalize_filename_backend(backend)
-	_validate_model_override(resolved_backend, model)
 	if resolved_backend == APPLE_FILENAME_BACKEND:
 		import screenshot_lib.apple_models
 
-		return screenshot_lib.apple_models.run_apple_model(prompt, instructions)
+		response = screenshot_lib.apple_models.run_apple_model(prompt, instructions)
+		return response
 
 	import screenshot_lib.ollama_models
 
-	resolved_model = resolve_ollama_model(model)
-	return screenshot_lib.ollama_models.run_ollama_model(
+	response = screenshot_lib.ollama_models.run_ollama_model(
 		prompt,
 		instructions,
-		resolved_model,
+		DEFAULT_FILENAME_MODEL,
 		FILENAME_MODEL_THINKING,
 	)
+	return response
 
 
 #============================================
 def unit_test(
 	backend: str | None = None,
-	model: str | None = None,
 ) -> None:
 	"""
 	Run the configured filename model's availability test.
 
 	Args:
 		backend: Optional provider override.
-		model: Optional Ollama model override.
 	"""
 	resolved_backend = normalize_filename_backend(backend)
-	_validate_model_override(resolved_backend, model)
 	if resolved_backend == APPLE_FILENAME_BACKEND:
 		import screenshot_lib.apple_models
 
@@ -130,5 +108,4 @@ def unit_test(
 
 	import screenshot_lib.ollama_models
 
-	resolved_model = resolve_ollama_model(model)
-	screenshot_lib.ollama_models.unit_test(resolved_model, FILENAME_MODEL_THINKING)
+	screenshot_lib.ollama_models.unit_test(DEFAULT_FILENAME_MODEL, FILENAME_MODEL_THINKING)

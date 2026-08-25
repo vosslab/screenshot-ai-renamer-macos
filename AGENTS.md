@@ -13,17 +13,17 @@ swap in new models confidently.
    on-screen text. Its output is passed unchanged to downstream agents.
 3. **Caption Agents** - `screenshot_lib/generate_caption.py` loads both backends:
    - `moondream` uses the newest local Moondream model compatible with the active
-     device. Apple MPS uses Moondream2 because Moondream3 Preview's Transformers
-     path requires FlexAttention, which is not supported on MPS.
+     device. Apple MPS uses Moondream2 with its MPS-compatible Transformers path;
+     Moondream3 Preview's path requires FlexAttention.
    - `vit-gpt2` produces literal summaries of visible text and layout.
 4. **Aggregator** - `_compose_caption_payload()` in `screenshot-renamer.py`
    merges OCR text and all captions, adding a model note that reminds the final
    LLM how to weigh Moondream vs. ViT-GPT2 if both are present.
 5. **Filename Agent** - `screenshot_lib/intelligent_filename.py` sends the
    aggregated context through `screenshot_lib/filename_models.py`. Ollama with
-   `qwen3.5:27b` is the default; Apple's official `apple-fm-sdk` is an optional
+   `qwen3.5:27b` is the default; Apple's official `apple-fm-sdk` is a selectable
    provider. The existing filename policy enforces snake_case, a 64-character
-   limit, neutral descriptors for people, and no extension in model output.
+   limit, neutral descriptors for people, and an extension-free model result.
 6. **Actions** - The script renames the file and writes EXIF metadata so the new
    caption + OCR text stay embedded in the image, while the CLI reports per-image
    durations and adjusts the ETA for the remaining queue.
@@ -49,7 +49,7 @@ model configuration:
 - `DEFAULT_FILENAME_BACKEND` selects `ollama` or `apple`.
 - `DEFAULT_FILENAME_MODEL` selects the installed Ollama model.
 - `FILENAME_MODEL_THINKING` remains enabled for filename generation.
-- Filename requests impose no output-token cap.
+- Filename requests allow the model to determine its full response length.
 
 `screenshot_lib/ollama_models.py` sends stable policy as a system message and the
 task plus evidence as a user message. It disables streaming, keeps the thinking
@@ -58,18 +58,17 @@ trace separate, and returns the final answer content for XML extraction by
 
 `screenshot_lib/apple_models.py` uses Apple's official `apple_fm_sdk` module.
 It checks system-model availability, opens a short-lived language-model session,
-and returns unrestricted response text to the same XML extraction path. The
-deprecated third-party `apple-foundation-models` binding is not supported.
+and returns unrestricted response text to the same XML extraction path.
 
 ## Extending the Agents
 
 - **Add new captioners** by extending `screenshot_lib/generate_caption.py` with another
   backend and invoking it from `screenshot-renamer.py` alongside the defaults.
 - **Customize filename models** by editing the centralized constants in
-  `screenshot_lib/filename_models.py`. Do not add production CLI flags for model
-  settings that rarely change between runs.
-- **Evaluate prompt changes** with `tests/e2e/e2e_filename_prompt_eval.py` and
-  `tests/e2e/filename_prompt_cases.json` before changing defaults.
+  `screenshot_lib/filename_models.py`. Keep stable model settings in these
+  constants and reserve the production CLI for frequent per-run choices.
+- **Evaluate prompt changes** with `tests/e2e/e2e_filename_prompt_eval.py`
+  before changing defaults.
 - **Metadata** - if you add extra context, update `screenshot_lib/update_metadata.py` to
   embed it so Spotlight / Photos can search for it later.
 
@@ -81,8 +80,8 @@ See Markdown style in docs/MARKDOWN_STYLE.md.
 See repo style in docs/REPO_STYLE.md.
 When making edits, document them in docs/CHANGELOG.md.
 Agents may run programs in the tests folder, including smoke tests and pyflakes/mypy runner scripts.
-When in doubt, implement the changes the user asked for rather than waiting for a response; the user is not the best reader and will likely miss your request and then be confused why it was not implemented or fixed.
-When changing code always run tests, documentation does not require tests.
+Implement clear requested changes and continue through their verification.
+Run tests after code changes and use focused documentation checks for documentation-only edits.
 
 ## Environment
 Codex must run Python using `/opt/homebrew/opt/python@3.12/bin/python3.12` (use Python 3.12 only).

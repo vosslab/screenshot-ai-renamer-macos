@@ -9,27 +9,28 @@ model for a filename, and optionally renames the image and embeds metadata.
 Preview changes without renaming files:
 
 ```bash
-./screenshot-renamer.py --dry-run
+source source_me.sh && python screenshot-renamer.py --dry-run
 ```
 
 Process screenshots on the Desktop:
 
 ```bash
-./screenshot-renamer.py
+source source_me.sh && python screenshot-renamer.py
 ```
 
 Process another directory:
 
 ```bash
-./screenshot-renamer.py --directory /path/to/screenshots
+source source_me.sh && python screenshot-renamer.py --directory /path/to/screenshots
 ```
 
 ## Filename models
 
 Ollama with `qwen3.5:27b` is the default filename model. Thinking is always
 enabled for Ollama. Apple's official Foundation Models SDK is also available as
-an optional provider. Either model may reason verbosely, then places the selected
-slug inside a `<filename>` XML element for extraction.
+a selectable provider. Ollama may reason verbosely, then places the selected slug
+inside a `<filename>` XML element. Both provider adapters return complete
+response text to the shared XML extraction path.
 
 Model choices are intentionally not production CLI flags because they rarely
 change between runs. Customize these constants in
@@ -48,7 +49,8 @@ output-token budget.
 Moondream uses its normal caption mode unless a custom question is supplied:
 
 ```bash
-./screenshot-renamer.py --caption-prompt "Describe the screenshot's main task and application."
+source source_me.sh && python screenshot-renamer.py \
+	--caption-prompt "Describe the screenshot's main task and application."
 ```
 
 The custom question applies to Moondream. ViT-GPT2 remains a literal caption
@@ -73,11 +75,10 @@ Run the committed semantic evaluation cases against the default model:
 source source_me.sh && python tests/e2e/e2e_filename_prompt_eval.py
 ```
 
-Compare a candidate model on one case without changing production configuration:
+Evaluate one case after changing the centralized model configuration:
 
 ```bash
 source source_me.sh && python tests/e2e/e2e_filename_prompt_eval.py \
-	--filename-model qwen3.5:27b \
 	--case invoice_source_conflict
 ```
 

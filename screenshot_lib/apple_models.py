@@ -27,7 +27,8 @@ async def _respond_with_apple_model(prompt: str, instructions: str) -> str:
 	response = await session.respond(prompt)
 	if not response.strip():
 		raise RuntimeError("Apple Foundation Models returned no final content.")
-	return response.strip()
+	cleaned_response = response.strip()
+	return cleaned_response
 
 
 #============================================

@@ -13,6 +13,13 @@
   standalone commands and remove all imports from `tools/`.
 
 ### Behavior or Interface Changes
+- Keep Ollama model identity in `DEFAULT_FILENAME_MODEL` as the single
+  configuration authority; remove the unused per-call model override path.
+- Rewrite the filename LLM instructions around desired actions: interpret OCR
+  and captions as evidence, select representative thematic terms, use neutral
+  functional language, format a snake_case slug, and return it in XML.
+- Rewrite operational agent guidance around the intended configuration and
+  verification paths while omitting unwanted alternatives.
 - Keep the existing filename-selection rules and Moondream-versus-ViT source
   guidance while changing the result envelope to `<filename>` XML.
 - Allow verbose model reasoning outside the XML element. Prefer the parsed XML
@@ -21,12 +28,21 @@
   caps from local filename requests.
 - Keep model configuration out of the production CLI; centralize the backend
   and model constants in `screenshot_lib/filename_models.py`.
+- Remove the E2E evaluator's `--filename-model` argument. Model identity is
+  stable configuration rather than a per-run interaction; the evaluator keeps
+  only case selection and the provider mode switch.
 - Clarify that custom caption questions apply to Moondream while ViT-GPT2
   remains literal. Caption model selection and MPS compatibility are unchanged.
 
 ### Fixes and Maintenance
+- Document full Xcode 26+ as a baseline installation requirement for building
+  the included official `apple-fm-sdk`; Ollama remains the runtime default.
+- Route repo-local Python examples through `source source_me.sh && python` so
+  installation, usage, and troubleshooting commands use Python 3.12.
 - Declare the Ollama Homebrew formula and Python client dependencies.
 - Parse model-supplied XML with a hardened `lxml` parser.
+- Keep the caption-module import from shadowing the `screenshot_lib` package in
+  the main CLI's filename-model unit-test path.
 - Enable the canonical repo-root `PYTHONPATH` extension so standalone commands
   under `tools/` can import `screenshot_lib` after sourcing `source_me.sh`.
 - Refresh install, usage, architecture, file-structure, troubleshooting,
@@ -38,11 +54,14 @@
 - Remove the redundant `tools/intelligent_filename.py` wrapper after moving
   runtime ownership to `screenshot_lib/intelligent_filename.py`; use the live
   E2E evaluator for standalone filename-model experiments.
+- Remove mock-heavy implementation tests and the unapproved external E2E case
+  fixture. Keep durable filename behavior in fast pytest and inline the small
+  semantic corpus in the manual E2E evaluator.
 
 ### Decisions and Failures
 - Keep Ollama as the default because `qwen3.5:27b` has passed the filename
   evaluation corpus on the target Mac; retain the official Apple SDK as an
-  optional provider for continued evaluation.
+  selectable provider for continued evaluation.
 - Record that `apple-fm-sdk` 0.2.1 installed successfully and reported the
   system model as available, but a minimal generation request failed with SDK
   status 255. A direct Swift probe exposed underlying native
@@ -50,6 +69,19 @@
   below the prompt, XML, thinking, and token-budget layers.
 
 ### Developer Tests and Notes
+- Complete a fresh six-pass audit covering scope, tests, style, documentation,
+  legacy code, and comments. Confirm 684 fast tests pass in 1.22 seconds and the
+  simplified default Qwen dispatcher passes its live unit probe in 33.19 seconds.
+- Classify live model and provider probes as one-time implementation checks,
+  not permanent pytest cases. The manual E2E evaluator remains outside pytest
+  for deliberate model and prompt comparisons.
+- Retain four permanent, offline filename behavior tests. Confirm the 684-test
+  fast lane passes in 1.21 seconds and the inlined `invoice_source_conflict`
+  E2E case passes with `qwen3.5:27b` in 58.06 seconds.
+- Confirm the positive filename prompt passes all six semantic cases in 515.05
+  seconds, with individual cases taking 43.14 to 126.30 seconds. Preserve the
+  semantic result and record the slower single-run latency for future comparison
+  rather than attributing it to prompt wording without repeated measurements.
 - Keep Apple MPS on Moondream2 because Moondream3 Preview still requires
   unsupported FlexAttention operations.
 - Confirm `qwen3.5:27b` passed all six live filename evaluation cases in

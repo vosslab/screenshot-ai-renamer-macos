@@ -6,26 +6,26 @@ A local Python CLI for Mac users who want screenshots renamed from OCR, visual c
 
 - Apple Silicon Mac.
 - Python 3.12.
-- macOS 26+, Apple Intelligence, and full Xcode 26+ for the optional Apple
-  Foundation Models provider.
+- Full Xcode 26+ to build the included official Apple Foundation Models SDK.
+- macOS 26+ and Apple Intelligence to select the Apple filename provider.
 - Homebrew.
 
 ## Quick start
 
 ```bash
 brew bundle
-./install_moondream.py
+source source_me.sh && python install_moondream.py
 ollama pull qwen3.5:27b
-./screenshot-renamer.py -t
-./screenshot-renamer.py --dry-run
+source source_me.sh && python screenshot-renamer.py -t
+source source_me.sh && python screenshot-renamer.py --dry-run
 ```
 
 ## Usage
 
 ```bash
-./screenshot-renamer.py --dry-run
-./screenshot-renamer.py
-./screenshot-renamer.py --directory /path/to/screenshots
+source source_me.sh && python screenshot-renamer.py --dry-run
+source source_me.sh && python screenshot-renamer.py
+source source_me.sh && python screenshot-renamer.py --directory /path/to/screenshots
 ```
 
 Filename model defaults are centralized in

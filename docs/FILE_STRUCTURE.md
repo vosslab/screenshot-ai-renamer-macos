@@ -66,7 +66,7 @@
 - [tests/test_function_typing.py](../tests/test_function_typing.py): type
   annotation gate (builtin generics and PEP 604 unions, no `typing`).
 - [tests/test_filename_generation.py](../tests/test_filename_generation.py):
-  filename normalization, prompt-boundary, and model-selection tests.
+  filename normalization, evidence-preservation, and XML-response tests.
 - [tests/test_bandit_security.py](../tests/test_bandit_security.py): Bandit
   security gate.
 - [tests/test_pyflakes_code_lint.py](../tests/test_pyflakes_code_lint.py):
@@ -91,9 +91,7 @@
 - [tests/TESTS_README.md](../tests/TESTS_README.md): test layout and execution
   notes.
 - [tests/e2e/e2e_filename_prompt_eval.py](../tests/e2e/e2e_filename_prompt_eval.py):
-  live semantic and latency evaluation for filename models and prompts.
-- [tests/e2e/filename_prompt_cases.json](../tests/e2e/filename_prompt_cases.json):
-  committed OCR/caption evaluation cases and semantic expectations.
+  live semantic and latency evaluation with inline filename cases.
 
 ### [devel/](../devel/)
 
