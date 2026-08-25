@@ -9,9 +9,9 @@ swap in new models confidently.
 
 1. **Finder** - `screenshot-renamer.py` scans the target directory for macOS
    screenshots (`Screen*.png`).
-2. **OCR Agent** - `tools/extract_text.py` runs Tesseract to capture every bit of
+2. **OCR Agent** - `screenshot_lib/extract_text.py` runs Tesseract to capture every bit of
    on-screen text. Its output is passed unchanged to downstream agents.
-3. **Caption Agents** - `tools/generate_caption.py` loads both backends:
+3. **Caption Agents** - `screenshot_lib/generate_caption.py` loads both backends:
    - `moondream` uses the newest local Moondream model compatible with the active
      device. Apple MPS uses Moondream2 because Moondream3 Preview's Transformers
      path requires FlexAttention, which is not supported on MPS.
@@ -19,49 +19,58 @@ swap in new models confidently.
 4. **Aggregator** - `_compose_caption_payload()` in `screenshot-renamer.py`
    merges OCR text and all captions, adding a model note that reminds the final
    LLM how to weigh Moondream vs. ViT-GPT2 if both are present.
-5. **Filename Agent** - `tools/intelligent_filename.py` sends the aggregated
-   context to Apple Foundation Models via `tools/config_apple_models.py`,
-   enforcing snake_case, 64-character limits, neutral descriptors for people, and
-   "no extension" rules.
+5. **Filename Agent** - `screenshot_lib/intelligent_filename.py` sends the
+   aggregated context through `screenshot_lib/filename_models.py`. Ollama with
+   `qwen3.5:27b` is the default; Apple's official `apple-fm-sdk` is an optional
+   provider. The existing filename policy enforces snake_case, a 64-character
+   limit, neutral descriptors for people, and no extension in model output.
 6. **Actions** - The script renames the file and writes EXIF metadata so the new
    caption + OCR text stay embedded in the image, while the CLI reports per-image
    durations and adjusts the ETA for the remaining queue.
 
 ## Prompt Design
 
-- **OCR block** is always included verbatim so the filename LLM can reference any
-  text that Tesseract saw, even if the caption models missed it.
+- **OCR block** contains the complete text Tesseract observed.
 - **Caption block** contains one section per backend (e.g., "Moondream caption"
   and "Vit Gpt2 caption"). This redundancy gives the filename agent richer
   context for ambiguous screenshots.
-- **Model note** clarifies that "Moondream tends to produce richer descriptions
-  while ViT-GPT2 is literal" whenever both are used. Feel free to edit this
-  sentence in `_compose_caption_payload()` if you swap models.
-- **Filename instructions** demand snake_case, no extension, and concise intent-
-  focused wording. Update `tools/intelligent_filename.py` if you want different
-  rules. OCR and caption inputs are trimmed to stay within the Apple Foundation
-  Models 4,096-token context window.
+- **Model note** retains the established guidance that Moondream is richer while
+  ViT-GPT2 is more literal.
+- **Filename instructions** retain the existing intent-focused naming rules.
+- **Output contract** asks the LLM to put its final slug in a `<filename>` XML
+  element while allowing verbose reasoning outside it. The application prefers
+  the XML value and retains the previous sanitizer as a compatibility fallback.
 
-## Apple Foundation Models Backend
+## Filename LLM
 
-`tools/config_apple_models.py` wraps the Python bindings for Apple Foundation
-Models:
+`screenshot_lib/filename_models.py` is the single authority for filename
+model configuration:
 
-- The code requires an Apple Silicon Mac running macOS 26+ with Apple
-  Intelligence enabled.
-- `run_apple_model()` opens a short-lived session, executes a text generation
-  with low temperature, and retries transient failures.
-- `unit_test()` validates availability by solving a simple math prompt.
-- If you need structured output or streaming, extend `run_apple_model()` to
-  accept schema/stream parameters and pass them through to `Session.generate()`.
+- `DEFAULT_FILENAME_BACKEND` selects `ollama` or `apple`.
+- `DEFAULT_FILENAME_MODEL` selects the installed Ollama model.
+- `FILENAME_MODEL_THINKING` remains enabled for filename generation.
+- Filename requests impose no output-token cap.
+
+`screenshot_lib/ollama_models.py` sends stable policy as a system message and the
+task plus evidence as a user message. It disables streaming, keeps the thinking
+trace separate, and returns the final answer content for XML extraction by
+`screenshot_lib/intelligent_filename.py`.
+
+`screenshot_lib/apple_models.py` uses Apple's official `apple_fm_sdk` module.
+It checks system-model availability, opens a short-lived language-model session,
+and returns unrestricted response text to the same XML extraction path. The
+deprecated third-party `apple-foundation-models` binding is not supported.
 
 ## Extending the Agents
 
-- **Add new captioners** by extending `tools/generate_caption.py` with another
+- **Add new captioners** by extending `screenshot_lib/generate_caption.py` with another
   backend and invoking it from `screenshot-renamer.py` alongside the defaults.
-- **Customize prompts** by editing `tools/intelligent_filename.py` or exposing
-  new CLI arguments. Anything echoed into the prompt will reach the filename LLM.
-- **Metadata** - if you add extra context, update `tools/update_metadata.py` to
+- **Customize filename models** by editing the centralized constants in
+  `screenshot_lib/filename_models.py`. Do not add production CLI flags for model
+  settings that rarely change between runs.
+- **Evaluate prompt changes** with `tests/e2e/e2e_filename_prompt_eval.py` and
+  `tests/e2e/filename_prompt_cases.json` before changing defaults.
+- **Metadata** - if you add extra context, update `screenshot_lib/update_metadata.py` to
   embed it so Spotlight / Photos can search for it later.
 
 Keep this file updated whenever the coordination logic changes; it's the quick

@@ -4,8 +4,8 @@
 
 - [AGENTS.md](../AGENTS.md): agent pipeline overview, repo-specific workflow
   rules, and Python execution constraints.
-- [Brewfile](../Brewfile): Homebrew system dependencies: ExifTool, Tesseract,
-  and libvips.
+- [Brewfile](../Brewfile): Homebrew system dependencies: Ollama, ExifTool,
+  Tesseract, and libvips.
 - [CLAUDE.md](../CLAUDE.md): Claude-specific instructions for environments that
   use that file.
 - [LICENSE](../LICENSE): project license.
@@ -22,27 +22,40 @@
 - [REPO_TYPE](../REPO_TYPE): project type marker used by style propagation.
 - [VERSION](../VERSION): single-source version string, synced with packaging.
 - [docs/](.): durable project documentation and style guides.
-- [tools/](../tools/): OCR, captioning, filename, Apple model, metadata, and
-  shared image helpers.
+- [screenshot_lib/](../screenshot_lib/): reusable OCR, captioning, filename,
+  model, XML-response, and metadata modules.
+- [tools/](../tools/): standalone utility commands; application code does not
+  import from this directory.
 - [tests/](../tests/): pytest checks, style gates, and helper scripts.
 - [devel/](../devel/): developer maintenance scripts for changelog and release
   workflows.
 
 ## Key subtrees
 
+### [screenshot_lib/](../screenshot_lib/)
+
+- [screenshot_lib/common_func.py](../screenshot_lib/common_func.py): shared device, image resize,
+  attention-mask, and image discovery helpers.
+- [screenshot_lib/filename_models.py](../screenshot_lib/filename_models.py):
+  filename model configuration and dispatch.
+- [screenshot_lib/apple_models.py](../screenshot_lib/apple_models.py): official
+  Apple Foundation Models SDK adapter.
+- [screenshot_lib/ollama_models.py](../screenshot_lib/ollama_models.py): local
+  Ollama chat wrapper for filename generation.
+- [screenshot_lib/extract_text.py](../screenshot_lib/extract_text.py): Tesseract OCR helper.
+- [screenshot_lib/generate_caption.py](../screenshot_lib/generate_caption.py): Moondream and
+  ViT-GPT2 caption backend setup and inference.
+- [screenshot_lib/intelligent_filename.py](../screenshot_lib/intelligent_filename.py): filename
+  prompt construction and response validation.
+- [screenshot_lib/xml_response.py](../screenshot_lib/xml_response.py): XML
+  element extraction from model responses that may contain surrounding prose.
+- [screenshot_lib/update_metadata.py](../screenshot_lib/update_metadata.py): ExifTool metadata
+  writer.
+
 ### [tools/](../tools/)
 
-- [tools/common_func.py](../tools/common_func.py): shared device, image resize,
-  attention-mask, and image discovery helpers.
-- [tools/config_apple_models.py](../tools/config_apple_models.py): Apple
-  Foundation Models availability checks and text-generation wrapper.
-- [tools/extract_text.py](../tools/extract_text.py): Tesseract OCR helper.
-- [tools/generate_caption.py](../tools/generate_caption.py): Moondream and
-  ViT-GPT2 caption backend setup and inference.
-- [tools/intelligent_filename.py](../tools/intelligent_filename.py): filename
-  prompt construction and response validation.
-- [tools/update_metadata.py](../tools/update_metadata.py): ExifTool metadata
-  writer.
+- [tools/graphify_map_repo.py](../tools/graphify_map_repo.py): standalone
+  repository-map generator.
 
 ### [tests/](../tests/)
 
@@ -52,6 +65,8 @@
   tracked-file discovery helpers for tests.
 - [tests/test_function_typing.py](../tests/test_function_typing.py): type
   annotation gate (builtin generics and PEP 604 unions, no `typing`).
+- [tests/test_filename_generation.py](../tests/test_filename_generation.py):
+  filename normalization, prompt-boundary, and model-selection tests.
 - [tests/test_bandit_security.py](../tests/test_bandit_security.py): Bandit
   security gate.
 - [tests/test_pyflakes_code_lint.py](../tests/test_pyflakes_code_lint.py):
@@ -75,6 +90,10 @@
   whitespace check/fix helpers.
 - [tests/TESTS_README.md](../tests/TESTS_README.md): test layout and execution
   notes.
+- [tests/e2e/e2e_filename_prompt_eval.py](../tests/e2e/e2e_filename_prompt_eval.py):
+  live semantic and latency evaluation for filename models and prompts.
+- [tests/e2e/filename_prompt_cases.json](../tests/e2e/filename_prompt_cases.json):
+  committed OCR/caption evaluation cases and semantic expectations.
 
 ### [devel/](../devel/)
 
@@ -125,8 +144,9 @@
 
 ## Where to add new work
 
-- Add runtime helpers under [tools/](../tools/) when they support the screenshot
-  pipeline.
+- Add reusable runtime modules under [screenshot_lib/](../screenshot_lib/).
+- Add standalone utility commands under [tools/](../tools/); never import from
+  `tools/` in application or test code.
 - Add repo-level CLI scripts at the root when they are user-facing and
   single-purpose.
 - Add developer maintenance automation under [devel/](../devel/).

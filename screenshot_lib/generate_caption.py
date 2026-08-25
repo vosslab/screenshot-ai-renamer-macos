@@ -5,7 +5,7 @@ import torch
 import transformers
 import PIL.Image
 
-from tools import common_func
+import screenshot_lib.common_func
 
 MOONDREAM_MODEL_ID = "moondream/moondream3-preview"
 MOONDREAM_MPS_MODEL_ID = "vikhyatk/moondream2"
@@ -18,7 +18,7 @@ GPT2_TOKENIZER_MODEL_ID = "gpt2"
 def _caption_with_moondream(image_path: str, ai_components: dict) -> str:
 	"""Run caption generation using the latest Moondream remote-code model."""
 	image = PIL.Image.open(image_path).convert("RGB")
-	image = common_func.resize_image(image, ai_components.get("max_dimension", 720))
+	image = screenshot_lib.common_func.resize_image(image, ai_components.get("max_dimension", 720))
 
 	if ai_components.get("prompt"):
 		caption_result = ai_components["model"].query(
@@ -39,7 +39,7 @@ def _caption_with_moondream(image_path: str, ai_components: dict) -> str:
 def _caption_with_vit_gpt2(image_path: str, ai_components: dict) -> str:
 	"""Run caption generation using the ViT-GPT2 encoder-decoder pipeline."""
 	image = PIL.Image.open(image_path).convert("RGB")
-	image = common_func.resize_image(image, ai_components.get("max_dimension", 1280))
+	image = screenshot_lib.common_func.resize_image(image, ai_components.get("max_dimension", 1280))
 
 	device = ai_components["device"]
 	feature_extractor = ai_components["feature_extractor"]
@@ -47,7 +47,7 @@ def _caption_with_vit_gpt2(image_path: str, ai_components: dict) -> str:
 	tokenizer = ai_components["tokenizer"]
 
 	pixel_values = feature_extractor(images=image, return_tensors="pt").pixel_values.to(device)
-	attention_mask = common_func.get_attention_mask(pixel_values, device)
+	attention_mask = screenshot_lib.common_func.get_attention_mask(pixel_values, device)
 
 	output_ids = model.generate(
 		pixel_values,
@@ -127,7 +127,7 @@ def generate_caption(image_path: str, ai_components: dict) -> str:
 def setup_ai_components(prompt: str = None, backend: str = "moondream") -> dict:
 	"""Setup AI components, loading the requested captioning backend."""
 	backend = (backend or "moondream").lower()
-	device = common_func.get_mps_device()
+	device = screenshot_lib.common_func.get_mps_device()
 
 	if backend == "vit-gpt2":
 		_suppress_transformers_generation_warnings()

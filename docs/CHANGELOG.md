@@ -1,5 +1,60 @@
 # Changelog
 
+## 2026-08-25
+
+### Additions and New Features
+- Add a configurable filename-model provider layer backed by Ollama and Apple's
+  official `apple-fm-sdk`.
+- Default filename generation to the installed `qwen3.5:27b` Ollama model with
+  thinking enabled.
+- Add focused filename unit tests and a six-case live semantic evaluator for
+  model and prompt comparisons.
+- Create `screenshot_lib/` for reusable pipeline modules; keep `tools/` for
+  standalone commands and remove all imports from `tools/`.
+
+### Behavior or Interface Changes
+- Keep the existing filename-selection rules and Moondream-versus-ViT source
+  guidance while changing the result envelope to `<filename>` XML.
+- Allow verbose model reasoning outside the XML element. Prefer the parsed XML
+  value and retain the previous sanitizer when a response omits usable XML.
+- Keep Ollama thinking enabled and remove repository-imposed generation-token
+  caps from local filename requests.
+- Keep model configuration out of the production CLI; centralize the backend
+  and model constants in `screenshot_lib/filename_models.py`.
+- Clarify that custom caption questions apply to Moondream while ViT-GPT2
+  remains literal. Caption model selection and MPS compatibility are unchanged.
+
+### Fixes and Maintenance
+- Declare the Ollama Homebrew formula and Python client dependencies.
+- Parse model-supplied XML with a hardened `lxml` parser.
+- Enable the canonical repo-root `PYTHONPATH` extension so standalone commands
+  under `tools/` can import `screenshot_lib` after sourcing `source_me.sh`.
+- Refresh install, usage, architecture, file-structure, troubleshooting,
+  README, and agent-pipeline documentation.
+
+### Removals and Deprecations
+- Remove all imports, dependencies, and compatibility paths for the deprecated
+  third-party `apple-foundation-models` package.
+- Remove the redundant `tools/intelligent_filename.py` wrapper after moving
+  runtime ownership to `screenshot_lib/intelligent_filename.py`; use the live
+  E2E evaluator for standalone filename-model experiments.
+
+### Decisions and Failures
+- Keep Ollama as the default because `qwen3.5:27b` has passed the filename
+  evaluation corpus on the target Mac; retain the official Apple SDK as an
+  optional provider for continued evaluation.
+- Record that `apple-fm-sdk` 0.2.1 installed successfully and reported the
+  system model as available, but a minimal generation request failed with SDK
+  status 255. A direct Swift probe exposed underlying native
+  `ModelManagerServices.ModelManagerError` code 1008, so the observed failure is
+  below the prompt, XML, thinking, and token-budget layers.
+
+### Developer Tests and Notes
+- Keep Apple MPS on Moondream2 because Moondream3 Preview still requires
+  unsupported FlexAttention operations.
+- Confirm `qwen3.5:27b` passed all six live filename evaluation cases in
+  315.67 seconds; individual cases took 16.95 to 100.96 seconds.
+
 ## 2026-06-16
 
 ### Behavior or Interface Changes

@@ -1,5 +1,7 @@
 accelerate
-apple-foundation-models
+apple-fm-sdk
+lxml
+ollama
 pillow
 pyexiftool
 pytesseract

@@ -60,12 +60,12 @@ def preload_moondream() -> None:
 	"""
 	Download and instantiate the local Moondream model for the active device.
 	"""
-	import tools.generate_caption
+	import screenshot_lib.generate_caption
 
 	print("Downloading model files from Hugging Face if needed.")
 	print("Caption inference runs locally after the files are cached.")
 	print("Preloading local Moondream model for the active device...")
-	components = tools.generate_caption.setup_ai_components(backend="moondream")
+	components = screenshot_lib.generate_caption.setup_ai_components(backend="moondream")
 	model_id = components["model_id"]
 	print(f"Moondream ready: {model_id}")
 	del components

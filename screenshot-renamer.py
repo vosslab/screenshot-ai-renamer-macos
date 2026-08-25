@@ -9,6 +9,9 @@ import sys
 import time
 from datetime import datetime, timedelta
 
+# local repo modules
+import screenshot_lib.filename_models
+
 
 RENAMED_PATTERN = re.compile(
 	r"^screenshot_(\d{4}-\d{2}-\d{2}|unknown-date)-[a-z0-9_-]+\.png$",
@@ -186,10 +189,10 @@ def process_image(
 		Returns:
 			bool: True if the image was processed, False if it was skipped (e.g., disappeared).
 	"""
-	from tools.extract_text import extract_text_from_image
-	from tools.generate_caption import generate_caption
-	from tools.intelligent_filename import generate_intelligent_filename
-	from tools.update_metadata import write_exif_metadata
+	import screenshot_lib.extract_text
+	import screenshot_lib.generate_caption
+	import screenshot_lib.intelligent_filename
+	import screenshot_lib.update_metadata
 
 	filename = os.path.basename(image_path)
 	print('\n')
@@ -227,7 +230,7 @@ def process_image(
 	print(colorize("\nStarting OCR...", Ansi.YELLOW))
 	start_time = time.time()
 	try:
-		ocr_text = extract_text_from_image(image_path)
+		ocr_text = screenshot_lib.extract_text.extract_text_from_image(image_path)
 	except FileNotFoundError:
 		print(colorize(f"Skipping missing file during OCR: {filename}", Ansi.YELLOW))
 		return False
@@ -239,7 +242,7 @@ def process_image(
 	print(colorize(f"\nStarting Caption ({ai_components['backend']})...", Ansi.YELLOW))
 	start_time = time.time()
 	try:
-		ai_caption = generate_caption(image_path, ai_components)
+		ai_caption = screenshot_lib.generate_caption.generate_caption(image_path, ai_components)
 	except FileNotFoundError:
 		print(colorize(f"Skipping missing file during caption: {filename}", Ansi.YELLOW))
 		return False
@@ -256,7 +259,10 @@ def process_image(
 		))
 		start_time = time.time()
 		try:
-			secondary_caption = generate_caption(image_path, secondary_ai_components)
+			secondary_caption = screenshot_lib.generate_caption.generate_caption(
+				image_path,
+				secondary_ai_components,
+			)
 		except FileNotFoundError:
 			print(colorize(
 				f"Skipping missing file during secondary caption: {filename}",
@@ -275,7 +281,11 @@ def process_image(
 	start_time = time.time()
 	caption_payload, model_note = _compose_caption_payload(captions)
 	try:
-		filename_stub = generate_intelligent_filename(ocr_text, caption_payload, model_note)
+		filename_stub = screenshot_lib.intelligent_filename.generate_intelligent_filename(
+			ocr_text,
+			caption_payload,
+			model_note,
+		)
 	except (RuntimeError, ValueError) as exc:
 		print(colorize(f"Skipping filename generation failure: {exc}", Ansi.YELLOW))
 		return False
@@ -316,7 +326,11 @@ def process_image(
 			))
 			return False
 		try:
-			write_exif_metadata(new_path, ocr_text, ai_caption)
+			screenshot_lib.update_metadata.write_exif_metadata(
+				new_path,
+				ocr_text,
+				ai_caption,
+			)
 		except FileNotFoundError:
 			print(colorize(
 				f"Metadata update skipped; file disappeared: {os.path.basename(new_path)}",
@@ -381,7 +395,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument("--no-color", dest="no_color", action="store_true",
 						help="Disable ANSI color output.")
 	parser.add_argument("--caption-prompt", dest="caption_prompt",
-						help="Custom captioning prompt applied to both caption models.")
+						help="Custom Moondream caption question; ViT-GPT2 remains literal.")
 	args = parser.parse_args()
 	return args
 
@@ -395,10 +409,10 @@ def main() -> None:
 	global COLOR_ENABLED
 	COLOR_ENABLED = should_use_color(args.no_color)
 
+	filename_description = screenshot_lib.filename_models.describe_filename_model()
+
 	if args.unit_test:
-		import sys
-		from tools import config_apple_models
-		config_apple_models.unit_test()
+		screenshot_lib.filename_models.unit_test()
 		sys.exit(0)
 
 	image_files, already_renamed = process_directory(args.directory)
@@ -430,15 +444,21 @@ def main() -> None:
 	print(colorize(f"{summary} {mode}.", Ansi.BOLD))
 
 	try:
-		from tools.generate_caption import setup_ai_components
+		import screenshot_lib.generate_caption
 
-		ai_components = setup_ai_components(prompt=args.caption_prompt, backend="moondream")
+		ai_components = screenshot_lib.generate_caption.setup_ai_components(
+			prompt=args.caption_prompt,
+			backend="moondream",
+		)
 	except Exception as exc:  # pylint: disable=broad-exception-caught
 		print(f"Failed to load Moondream backend: {exc}")
 		raise
 
 	try:
-		secondary_ai_components = setup_ai_components(prompt=args.caption_prompt, backend="vit-gpt2")
+		secondary_ai_components = screenshot_lib.generate_caption.setup_ai_components(
+			prompt=args.caption_prompt,
+			backend="vit-gpt2",
+		)
 	except Exception as exc:  # pylint: disable=broad-exception-caught
 		print(f"Failed to load ViT-GPT2 backend: {exc}")
 		secondary_ai_components = None
@@ -448,6 +468,7 @@ def main() -> None:
 		print(" + ViT-GPT2")
 	else:
 		print(" (ViT-GPT2 unavailable)")
+	print(f"Filename model: {filename_description}")
 	if args.caption_prompt:
 		print(colorize(
 			f"Custom caption prompt: {format_preview(args.caption_prompt, max_lines=3)}",

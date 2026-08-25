@@ -17,4 +17,3 @@ def write_exif_metadata(image_path: str, ocr_text: str, ai_caption: str) -> None
 		}
 		et.execute(*[f'-{key}={value}' for key, value in metadata.items()], "-overwrite_original", image_path)
 		print(f"Metadata written to {image_path} (original file overwritten)")
-

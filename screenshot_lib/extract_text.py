@@ -31,4 +31,3 @@ def process_directory(directory: str) -> None:
 			image_path = os.path.join(directory, filename)
 			text = extract_text_from_image(image_path)
 			print(f"Extracted text from {filename}:\n{text}\n")
-

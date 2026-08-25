@@ -1,24 +1,27 @@
 # Install and setup
 
 ## Requirements
-- Apple Silicon (arm64) on macOS 26.0 or newer with Apple Intelligence enabled.
+
+- Apple Silicon Mac.
 - Python 3.12.
-- Xcode command line tools (`xcode-select --install`).
+- Full Xcode 26+ with its license agreements accepted. The official Apple SDK
+  builds a native bridge during installation; command line tools alone are not
+  sufficient.
 - Homebrew.
 
+The optional Apple Foundation Models provider also requires macOS 26+ and Apple
+Intelligence enabled. Ollama remains the default provider.
+
 ## System dependencies
+
 ```bash
 brew bundle
 ```
 
-The Brewfile installs `exiftool`, `tesseract`, and `vips`.
+The Brewfile installs Ollama, ExifTool, Tesseract, and libvips.
 
-## Python dependencies
-```bash
-pip install -r pip_requirements.txt
-```
+## Python dependencies and Moondream setup
 
-## Moondream setup
 ```bash
 ./install_moondream.py
 ```
@@ -29,14 +32,25 @@ Transformers 4.x because the current Transformers 5 path is broken for
 Moondream on MPS, and Moondream3 Preview requires FlexAttention, which is not
 supported on MPS.
 
-## Verify Apple Intelligence
+## Filename model setup
+
+The default filename model is `qwen3.5:27b` through Ollama. Download it once:
+
 ```bash
-./screenshot-renamer.py -t
+ollama pull qwen3.5:27b
 ```
 
-Example output:
-```
-Running Apple Foundation Models unit test...
-Apple Foundation Models completed in 0.42 seconds (attempt 1)
-SUCCESS! 95 + 48 = 143
+Ollama must be running while screenshots are processed. Launch the Ollama app
+or start `ollama serve` in another terminal.
+
+The same setup installs Apple's official `apple-fm-sdk`. To use that provider,
+change `DEFAULT_FILENAME_BACKEND` from `ollama` to `apple` in
+[`screenshot_lib/filename_models.py`](../screenshot_lib/filename_models.py).
+The Apple provider uses the system-selected model and therefore has no model
+name setting.
+
+Verify the default filename model:
+
+```bash
+./screenshot-renamer.py -t
 ```
