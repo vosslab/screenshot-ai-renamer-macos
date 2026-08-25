@@ -140,8 +140,15 @@ cython_debug/
 .pypirc
 
 # === UNIVERSAL ===
-report_*.txt
+/report_*.txt
+/output*/
+/generated/
+/graphify-out/
 _temp*.?*
+/temp/
+/OTHER_REPOS/
+/LOCAL_ONLY/
+
 # === PYTHON ===
 site/
 

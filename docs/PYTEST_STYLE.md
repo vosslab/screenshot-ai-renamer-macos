@@ -1,5 +1,7 @@
 # PYTEST_STYLE.md
 
+> This file is vendored. Local changes can and will be overwritten by propagation.
+
 Language Model guide to Neil pytest usage.
 
 ## Is this a good pytest?
@@ -23,6 +25,7 @@ Run this checklist before writing a new pytest or approving one in review. Any u
 - [ ] One or two assertions per function (not five on a simple function).
 - [ ] Test body free of complex logic; complex logic moved to a helper and tested there.
 - [ ] Targets code that will remain in the repo (not `_temp.*` or ad-hoc debugging scripts).
+- [ ] Writes setup and test inputs inline rather than in an external on-disk data file, except for the fixture cases listed in [Fixture policy](#fixture-policy).
 
 See [Good tests](#good-tests) for examples of stable assertion shapes and [Brittle tests](#brittle-tests) for the rationale behind each red flag above.
 
@@ -32,12 +35,12 @@ See [Good tests](#good-tests) for examples of stable assertion shapes and [Britt
 * `tests/` (including `tests/playwright/` and `tests/e2e/`) is the only place `assert` statements should appear in this repo. Plain scripts and library modules must not contain `assert`. See [PYTHON_STYLE.md](PYTHON_STYLE.md#assert) for the rationale (module-level asserts slow script startup).
 * Pytest is the fast lane: keep tests deterministic and quick. Slow end-to-end tests live in `tests/playwright/` (browser-driven) and `tests/e2e/` (shell/Python) and run outside pytest (excluded via `collect_ignore = ["e2e", "playwright"]` in `tests/conftest.py`); see [E2E_TESTS.md](E2E_TESTS.md).
 * Store tests in `tests/` with files named `test_*.py`.
-* Use `tests/conftest.py` for pytest configuration, fixtures, collection hooks, and shared pytest setup.
+* Use `tests/conftest.py` for pytest configuration, collection hooks, and shared pytest setup.
 * Test functions should be named `test_*` and should use plain `assert`.
 * Keep tests small and deterministic.
 * Avoid network calls, random behavior, and time based logic unless mocked.
-* Prefer fixtures for setup and shared resources.
-* Use built in fixtures like `tmp_path` instead of custom temp directories.
+* Keep setup inline and close to the test.
+* Use `tmp_path` for temp files.
 * Avoid complex logic inside tests.
 * If test logic needs comments, move the logic into helper functions and test those helpers.
 * Before writing any test, ask: "will this test still pass next week without code changes?"
@@ -49,13 +52,47 @@ See [Good tests](#good-tests) for examples of stable assertion shapes and [Britt
 * Do not write tests for `_temp.*` files, ad-hoc debugging scripts, or any code intended to be deleted shortly after use.
 * Tests in `tests/` are reserved for code that will remain in the repo.
 
+## Fixture policy
+
+Write test inputs directly in the test by default. Put the setup near the assertion so the test is
+easy to read, move, and maintain.
+
+Inline means the test input is written directly in the test file, close to the assertion. Use a
+literal string, literal object, short list, or a short helper function used only by tests in that
+same file.
+
+This policy covers both test data files under `tests/fixtures/` and custom `@pytest.fixture`
+functions.
+
+Use fixtures for these durable cases:
+
+1. Use the builtin `tmp_path` fixture when a test needs a temporary file or directory.
+2. Use the vendored `collect_report` autouse harness for hygiene report checks. See [Hygiene report files](#hygiene-report-files).
+3. Use an existing repo file directly when that real file's required shape or loader behavior is
+   what the test checks -- a shipped config, a template, or committed production data that already
+   exists for a non-test reason.
+
+For all other tests, write the input directly in the test.
+
+Use `tmp_path` for file-shaped test input -- a CSV, YAML, JSON, image, or similar -- that exists
+only for the test: write the inline data into a `tmp_path` file at runtime, so the data lives in the
+test and the file exists only during the run. Add a permanent committed file only when that file
+already has a non-test purpose in the repo, or when a human explicitly approves it as durable shared
+test infrastructure.
+
+During early implementation, keep scratch setup in the test. Once the behavior is pinned, keep that
+setup in the test instead of moving it into a shared fixture.
+
+Treat a committed `tests/fixtures/` directory as shared test infrastructure. Get explicit human
+sign-off before adding one. These directories often accumulate stale files after their first use.
+
 ## Three-tier test layout
 
 Test files are organized by execution model and scope:
 
 * **`tests/test_*.py`** - Fast, deterministic unit and integration tests. Rules: no network, no file I/O beyond `tmp_path`, no sleeps, no subprocess CLI round-trips. Examples: lint checks (pyflakes, ASCII compliance, indentation), parser correctness, round-trip invariants.
 * **`tests/e2e/`** - Non-browser end-to-end (shell or Python orchestration); excluded from pytest (outside scope of `pytest tests/`); run via explicit shell or Python runner. Examples: full bootstrap flow, multi-repo propagation with real git operations, CLI round-trip chains.
-* **`tests/playwright/`** - Browser-driven E2E; excluded from pytest; run via Playwright runner or explicit shell. Examples: full-stack web app flows, UI interaction and assertion, rendered-output verification.
+* **`tests/playwright/`** - Browser-driven E2E; excluded from pytest; run via Playwright runner or explicit shell. Examples: full-stack web app flows, UI interaction and assertion, rendered-output verification. The website family (`website` and its inheriting `typescript`) includes `PLAYWRIGHT_TEST_STYLE.md` in their propagated `docs/` folder for browser test authoring rules.
 
 ## Runtime budget
 
@@ -101,6 +138,19 @@ tunable constants, or dataclass storage. These break when unrelated code changes
 real value. When in doubt, delete. A missing pytest is cheaper than a fragile one. This is the
 design-first philosophy applied to tests: see [REPO_STYLE.md](REPO_STYLE.md#core-philosophies).
 
+### Inline inputs, not external data files
+
+Prefer inline, self-contained test inputs. A test that reads an external on-disk data file is
+fragile by design: the file is a dependency that can move, be renamed, or be deleted, and when it
+vanishes the test fails for reasons unrelated to the code under test. If the missing file is loaded
+at module import time, the failure takes the whole test module down with it, not just the one case.
+Embed small real inputs directly in the test (a literal string, a short list, a few-line sample) so
+the case cannot drift out of existence.
+
+The hazard is a checked-in sample file the test reads at runtime: inline the content instead, or
+if the data is genuinely large, treat the round trip as an end-to-end check under `tests/e2e/` per
+[E2E_TESTS.md](E2E_TESTS.md).
+
 ## Basic commands
 
 Use this as the default test command:
@@ -126,8 +176,8 @@ Repo-hygiene tests (ascii, whitespace, pyflakes, shebangs, and similar enumerati
 get their file list from one shared helper, `file_utils.discover_files`. It is the canonical
 discovery API: it owns git scope selection, absolute-path join, dedupe, skip-dir filtering,
 extension filtering, the `isfile` check, and the sort. Use `file_utils.discover_files` as the
-single source of file discovery; the shared `SKIP_DIRS` and `path_has_skip_dir` live only in
-`file_utils.py`.
+single source of file discovery; the shared built-in directory and scratch exclusions live in
+`path_has_skip_dir` in `file_utils.py`.
 
 Signature:
 
@@ -154,8 +204,9 @@ only in `file_utils` regression tests that point discovery at a temporary direct
 
 Discovery filters files through three layers, in order:
 
-- Layer 1, `SKIP_DIRS` (vendored, `file_utils.py`): universal directory exclusions.
-  Identical across all repos.
+- Layer 1, universal exclusions (vendored, `file_utils.py`): built-in skipped directories,
+  `_temp*` scratch files/directories, and `dist_*/` scratch build directories, all handled by
+  `path_has_skip_dir`. Identical across all repos.
 - Layer 2, `REPO_HYGIENE_FILTERS` (repo-local, `tests/conftest.py`): per-test repo-local
   file/glob exclusions. This is the only home for repo-specific exclusions, because `conftest.py`
   survives propagation while vendored files (`file_utils.py` and every `tests/test_*.py`) are
@@ -167,6 +218,12 @@ Discovery filters files through three layers, in order:
 - Layer 3, `extra_filter` (vendored call site): a universal per-test SELECTION mechanism only
   (for example keep only `__init__.py`). Keep all repo-specific exclusions in
   `tests/conftest.py REPO_HYGIENE_FILTERS`; vendored files hold only universal logic.
+
+The source-file line-limit gate has one narrower manager-approval mechanism rather than a glob
+filter: `tests/source_file_line_limit_overrides.txt` may list exact repo-relative paths for tracked
+sources outside the repo's control, such as downloaded normative specifications. The file is
+optional, repo-owned, and never propagated between repos. Other hygiene exclusions remain in
+`REPO_HYGIENE_FILTERS`.
 
 A normal hygiene test calls `discover_files` with its `test_key` so Layer 2 can target it:
 
@@ -271,6 +328,10 @@ def test_topic(rel: str) -> None:
 	assert rel not in VIOLATIONS_BY_FILE, msg
 ```
 
+The `collect_report` autouse fixture above is the named shared-infrastructure exception under
+[Fixture policy](#fixture-policy): it stays a fixture because the harness itself, not
+test-specific data, is what needs to run once per module.
+
 Notes on the shape:
 
 - `collect_python_violations` handles AST parse-once and records `SyntaxError` entries for
@@ -300,8 +361,8 @@ Two vendored hygiene tests keep the discovery scaffold clean:
   Use builtin generics (`list`, `dict`, `tuple`, `set`) and PEP 604 unions (`X | None`).
   Use `collections.abc` (for example `collections.abc.Callable`) for callable and iterable params.
 - `tests/test_pytest_hygiene.py` -- AST guard ensuring hygiene tests keep all file-discovery
-  logic in `file_utils` (the shared `SKIP_DIRS`, `path_has_skip_dir`, and `gather_*` discovery
-  live there). See the "discovery lives in file_utils" guidance above.
+  logic in `file_utils` (the shared scratch/directory filter, `SKIP_DIRS`, `path_has_skip_dir`,
+  and `gather_*` discovery live there). See the "discovery lives in file_utils" guidance above.
 
 ## Failure triage
 
