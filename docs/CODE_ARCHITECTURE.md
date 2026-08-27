@@ -20,19 +20,23 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
   discovery, dry-run/live mode handling, progress output, ETA reporting, and
   per-image processing.
 - [install_models.py](../install_models.py): installs the runtime
-  dependency set and preloads the local Moondream and ViT-GPT2 caption models
-  after validating the required Apple MPS runtime, then removes explicitly
-  retired project models from the Hugging Face cache.
+  dependency set, exercises the Photon Metal and PyTorch MPS caption paths, and
+  removes explicitly retired caption models.
 - [screenshot_lib/extract_text.py](../screenshot_lib/extract_text.py): opens images with Pillow
   and extracts text through Tesseract via `pytesseract`.
-- [screenshot_lib/generate_caption.py](../screenshot_lib/generate_caption.py): loads caption
-  backends with Transformers. The primary backend is MPS-compatible Moondream2;
-  the secondary backend is ViT-GPT2.
+- [screenshot_lib/generate_caption.py](../screenshot_lib/generate_caption.py):
+  dispatches the resolved Moondream runtime or the ViT-GPT2 secondary backend.
+- The `screenshot_lib/moondream_photon.py` module adapts Moondream 3.1 to
+  Photon's native Metal runtime.
+- The `screenshot_lib/caption_quality.py` module rejects empty captions and
+  repeated-token generation collapse.
+- The `screenshot_lib/model_catalog.py` module separates model identities from
+  Mac runtime requirements and adapter implementations.
 - [screenshot_lib/intelligent_filename.py](../screenshot_lib/intelligent_filename.py):
   builds the established filename prompt, extracts the preferred XML result,
   and returns a sanitized PNG filename.
 - [screenshot_lib/filename_models.py](../screenshot_lib/filename_models.py): owns
-  filename model configuration and dispatch.
+  filename-provider selection, request behavior, and dispatch.
 - [screenshot_lib/apple_models.py](../screenshot_lib/apple_models.py): checks
   Apple's system-model availability and runs a short-lived session through the
   official `apple_fm_sdk` module.
@@ -40,9 +44,8 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
   separated system and user messages to the selected local Ollama model.
 - [screenshot_lib/update_metadata.py](../screenshot_lib/update_metadata.py): writes OCR text and
   caption metadata into the renamed image through ExifTool.
-- [screenshot_lib/common_func.py](../screenshot_lib/common_func.py): required
-  Apple MPS validation plus shared image resizing, attention-mask, and
-  image-path helpers.
+- [screenshot_lib/common_func.py](../screenshot_lib/common_func.py): validates
+  Apple Silicon, MPS, and physical memory, plus shared image helpers.
 
 ## Data flow
 
@@ -51,8 +54,10 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
    match `screenshot_YYYY-MM-DD-<slug>.png`.
 2. [screenshot_lib/extract_text.py](../screenshot_lib/extract_text.py) runs OCR and returns the
    extracted screen text.
-3. [screenshot_lib/generate_caption.py](../screenshot_lib/generate_caption.py) generates a primary
-   Moondream caption and, when available, a secondary ViT-GPT2 caption.
+3. [screenshot_lib/generate_caption.py](../screenshot_lib/generate_caption.py)
+   requests independent Moondream 3.1 Photon and ViT-GPT2 MPS captions. A
+   backend that fails setup, inference, or caption validation is omitted while
+   OCR and any other usable caption continue through the pipeline.
 4. `_compose_caption_payload()` in
    [screenshot-renamer.py](../screenshot-renamer.py) combines caption text and
    model guidance for the filename step.
@@ -90,14 +95,16 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
 
 ## Extension points
 
-- Add or swap caption backends in
-  [screenshot_lib/generate_caption.py](../screenshot_lib/generate_caption.py), then update
-  `_compose_caption_payload()` in
+- Add or swap caption runtimes as focused modules under
+  [screenshot_lib/](../screenshot_lib/), register them in
+  [screenshot_lib/generate_caption.py](../screenshot_lib/generate_caption.py),
+  then update `_compose_caption_payload()` in
   [screenshot-renamer.py](../screenshot-renamer.py) if the filename agent needs
   different model guidance.
 - Change filename rules in
   [screenshot_lib/intelligent_filename.py](../screenshot_lib/intelligent_filename.py).
-- Change filename model defaults and dispatch in
+- Change model identities and requirements in `screenshot_lib/model_catalog.py`.
+- Change filename-provider selection and dispatch in
   [screenshot_lib/filename_models.py](../screenshot_lib/filename_models.py).
 - Change Ollama request behavior in
   [screenshot_lib/ollama_models.py](../screenshot_lib/ollama_models.py).
@@ -112,6 +119,6 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
 
 ## Known gaps
 
-- Verify Moondream memory use and latency on the target Mac after upstream model
-  changes, because the project intentionally tracks current upstream packages and
-  unpinned model revisions.
+- Measure the full Moondream 3.1 plus Ollama `qwen3.5:27b` memory and latency
+  profile on 32 GB and 36 GB Macs. Each model fits independently, but the full
+  pipeline may create unified-memory pressure.

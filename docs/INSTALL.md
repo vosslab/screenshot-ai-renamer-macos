@@ -10,6 +10,9 @@
 
 Ollama remains the default filename provider.
 
+See `docs/MODELS.md` for the complete hardware, accelerator, memory, model, and
+native-runtime compatibility matrix.
+
 ## System dependencies
 
 ```bash
@@ -24,25 +27,27 @@ The Brewfile installs Ollama, ExifTool, Tesseract, and libvips.
 source source_me.sh && python install_models.py
 ```
 
-This installs the Python dependency set and preloads both local image-caption
-backends: Moondream2 plus ViT-GPT2 and its processor and tokenizer. Rich panels,
-section rules, and status labels distinguish dependencies, accelerator validation,
-each model, retired-model cleanup, and completion. The installer upgrades Torch
-and Torchvision together so their compiled extensions remain compatible.
+This installs the Python dependency set and validates two local caption paths:
 
-The caption pipeline requires Apple GPU acceleration through PyTorch MPS. It
-does not fall back to CPU or CUDA. Moondream2 remains selected even though
-Moondream3 Preview is available because the newer model requires FlexAttention,
-which PyTorch MPS does not support. PyTorch does not expose the Apple Neural
-Engine as a general device; Apple system models manage accelerator selection
-through macOS.
+- Moondream 3.1 through Photon's native Metal runtime.
+- ViT-GPT2 through PyTorch MPS as independent caption evidence and the visual
+  fallback when Photon is unavailable.
 
-After both current caption models load successfully, the installer removes
-explicitly retired project models from the Hugging Face cache. The current
-cleanup removes Moondream3 Preview and its Starmie tokenizer dependency. It does
-not delete active-model revisions, unrelated Hugging Face models, or Ollama
-models. The installer reports each repository and the expected recovered space
-before deletion.
+The installer runs a real caption request against a generated sanity-check image;
+loading weights alone does not count as validation. Rich sections distinguish
+dependencies, Apple hardware, each model, cleanup, and completion. Torch uses
+the compatible `>=2.12,<2.13` range, and Torchvision uses the paired
+`>=0.27,<0.28` range. The installer can take newer patch releases without
+crossing the native Photon bridge's supported minor-version boundary.
+
+Photon requires Apple Silicon, macOS 13+, and at least 24 GB of unified memory.
+The installer reports detected memory. Macs below 24 GB skip Moondream 3.1 and
+continue with OCR and ViT-GPT2 MPS. CPU and CUDA caption fallbacks remain
+disabled. PyTorch does not expose the Apple Neural Engine as a general device.
+
+After validation, cleanup removes the retired Moondream3 Preview and Moondream2
+repositories. It preserves Photon weights, unrelated Hugging Face models, and
+Ollama models.
 
 ## Filename model setup
 

@@ -3,15 +3,11 @@ import time
 
 import torch
 import transformers
-import transformers.dynamic_module_utils
-import PIL.Image
 
+import screenshot_lib.caption_quality
 import screenshot_lib.common_func
-
-MOONDREAM2_MODEL_ID = "vikhyatk/moondream2"
-VIT_GPT2_MODEL_ID = "nlpconnect/vit-gpt2-image-captioning"
-VIT_PROCESSOR_MODEL_ID = "google/vit-base-patch16-224-in21k"
-GPT2_TOKENIZER_MODEL_ID = "gpt2"
+import screenshot_lib.model_catalog
+import screenshot_lib.moondream_photon
 
 
 #============================================
@@ -24,48 +20,29 @@ class _CompatibleVisionEncoderDecoderModel(transformers.VisionEncoderDecoderMode
 
 
 #============================================
-def _caption_with_moondream(image_path: str, ai_components: dict) -> str:
-	"""Run caption generation using the latest Moondream remote-code model."""
-	image = PIL.Image.open(image_path).convert("RGB")
-	image = screenshot_lib.common_func.resize_image(image, ai_components.get("max_dimension", 720))
-
-	if ai_components.get("prompt"):
-		caption_result = ai_components["model"].query(
-			image=image,
-			question=ai_components["prompt"],
-			reasoning=False,
-		)
-		caption = caption_result.get("answer", "")
-	else:
-		caption_result = ai_components["model"].caption(image, length="normal")
-		caption = caption_result.get("caption", "")
-
-	caption_text = caption.strip()
-	return caption_text
-
-
-#============================================
 def _caption_with_vit_gpt2(image_path: str, ai_components: dict) -> str:
 	"""Run caption generation using the ViT-GPT2 encoder-decoder pipeline."""
-	image = PIL.Image.open(image_path).convert("RGB")
-	image = screenshot_lib.common_func.resize_image(image, ai_components.get("max_dimension", 1280))
+	import PIL.Image
 
+	image = PIL.Image.open(image_path).convert("RGB")
+	image = screenshot_lib.common_func.resize_image(image, ai_components["max_dimension"])
 	device = ai_components["device"]
 	feature_extractor = ai_components["feature_extractor"]
 	model = ai_components["model"]
 	tokenizer = ai_components["tokenizer"]
-
 	pixel_values = feature_extractor(images=image, return_tensors="pt").pixel_values.to(device)
-	attention_mask = screenshot_lib.common_func.get_attention_mask(pixel_values, device)
-
+	decoder_attention_mask = torch.ones(
+		(pixel_values.shape[0], 1),
+		dtype=torch.long,
+		device=device,
+	)
 	output_ids = model.generate(
 		pixel_values,
 		num_beams=4,
 		early_stopping=True,
-		attention_mask=attention_mask,
+		decoder_attention_mask=decoder_attention_mask,
 		max_new_tokens=32,
 	)
-
 	caption = tokenizer.decode(output_ids[0], skip_special_tokens=True)
 	caption_text = caption.strip()
 	return caption_text
@@ -79,129 +56,75 @@ def _suppress_transformers_generation_warnings() -> None:
 
 
 #============================================
-def _get_moondream2_tied_weights_keys(model: object) -> dict:
-	"""
-	Return tied-weight metadata assigned by Transformers or declared by Moondream2.
-	"""
-	assigned_key = "_moondream2_all_tied_weights_keys"
-	if assigned_key in model.__dict__:
-		return model.__dict__[assigned_key]
-
-	tied_keys = getattr(model, "_tied_weights_keys", None) or []
-	if isinstance(tied_keys, dict):
-		return tied_keys
-	key_map = {key: key for key in tied_keys}
-	return key_map
-
-
-#============================================
-def _set_moondream2_tied_weights_keys(model: object, tied_weights_keys: dict) -> None:
-	"""
-	Store tied-weight metadata assigned during Transformers model initialization.
-	"""
-	model.__dict__["_moondream2_all_tied_weights_keys"] = tied_weights_keys
-
-
-#============================================
-def _load_moondream_model(model_id: str, model_args: dict) -> object:
-	"""
-	Load Moondream while limiting its compatibility shim to model construction.
-	"""
-	if model_id != MOONDREAM2_MODEL_ID:
-		model = transformers.AutoModelForCausalLM.from_pretrained(  # nosec B615
-			model_id,
-			**model_args,
-		)
-		return model
-
-	config = transformers.AutoConfig.from_pretrained(  # nosec B615
-		model_id,
-		trust_remote_code=True,
-	)
-	class_reference = config.auto_map["AutoModelForCausalLM"]
-	model_class = transformers.dynamic_module_utils.get_class_from_dynamic_module(
-		class_reference,
-		model_id,
-	)
-	if not hasattr(model_class, "all_tied_weights_keys"):
-		model_class.all_tied_weights_keys = property(
-			_get_moondream2_tied_weights_keys,
-			_set_moondream2_tied_weights_keys,
-		)
-	model = model_class.from_pretrained(  # nosec B615
-		model_id,
-		config=config,
-		**model_args,
-	)
-	return model
-
-
-#============================================
 def _load_vit_gpt2_model() -> transformers.VisionEncoderDecoderModel:
 	"""Load ViT-GPT2 while ignoring only its obsolete attention-mask buffers."""
 	model = _CompatibleVisionEncoderDecoderModel.from_pretrained(  # nosec B615
-		VIT_GPT2_MODEL_ID
+		screenshot_lib.model_catalog.VIT_GPT2_MPS.model.model_id
 	)
 	return model
 
 
 #============================================
 def generate_caption(image_path: str, ai_components: dict) -> str:
-	"""Generate a caption for a given image using the configured backend."""
-	backend = ai_components.get("backend", "moondream")
+	"""Generate and validate a caption with the configured backend."""
 	start_time = time.time()
-
-	if backend == "vit-gpt2":
-		caption = _caption_with_vit_gpt2(image_path, ai_components)
+	if ai_components["backend_family"] == "moondream":
+		caption = screenshot_lib.moondream_photon.generate_caption(
+			image_path,
+			ai_components,
+		)
 	else:
-		caption = _caption_with_moondream(image_path, ai_components)
-
-	if not caption:
-		raise ValueError(f"Caption generation failed for backend '{backend}'.")
-
+		caption = _caption_with_vit_gpt2(image_path, ai_components)
+	screenshot_lib.caption_quality.require_usable_caption(
+		caption,
+		ai_components["display_name"],
+	)
 	ai_components["_last_caption_runtime"] = time.time() - start_time
 	return caption
 
 
 #============================================
-def setup_ai_components(prompt: str = None, backend: str = "moondream") -> dict:
-	"""Setup AI components, loading the requested captioning backend."""
-	backend = (backend or "moondream").lower()
-	device = screenshot_lib.common_func.get_mps_device()
-
-	if backend == "vit-gpt2":
-		_suppress_transformers_generation_warnings()
-		model = _load_vit_gpt2_model()
-		feature_extractor = transformers.ViTImageProcessor.from_pretrained(VIT_PROCESSOR_MODEL_ID)  # nosec B615
-		tokenizer = transformers.GPT2Tokenizer.from_pretrained(GPT2_TOKENIZER_MODEL_ID)  # nosec B615
-		model.to(device)
-
-		components = {
-			"backend": backend,
-			"model": model,
-			"feature_extractor": feature_extractor,
-			"tokenizer": tokenizer,
-			"device": device,
-			"prompt": prompt,
-			"max_dimension": 1280,
-		}
+def setup_ai_components(prompt: str | None = None, backend: str = "moondream") -> dict:
+	"""Load the requested caption backend and return its reusable components."""
+	backend_name = backend.lower()
+	if backend_name == "moondream":
+		components = screenshot_lib.moondream_photon.setup_captioner(prompt)
+		components["backend_family"] = "moondream"
 		return components
 
-	model_id = MOONDREAM2_MODEL_ID
-	model_args = {
-		"trust_remote_code": True,
-		"dtype": torch.float16,
-		"device_map": {"": device},
-	}
-	model = _load_moondream_model(model_id, model_args)
-	model.to(device)
+	if backend_name != "vit-gpt2":
+		raise ValueError(f"Unknown caption backend: {backend}")
 
+	model_spec = screenshot_lib.model_catalog.VIT_GPT2_MPS
+	device = screenshot_lib.common_func.get_mps_device()
+	_suppress_transformers_generation_warnings()
+	model = _load_vit_gpt2_model()
+	feature_extractor = transformers.ViTImageProcessor.from_pretrained(  # nosec B615
+		screenshot_lib.model_catalog.VIT_PROCESSOR_MODEL_ID
+	)
+	tokenizer = transformers.GPT2Tokenizer.from_pretrained(  # nosec B615
+		screenshot_lib.model_catalog.GPT2_TOKENIZER_MODEL_ID
+	)
+	model.to(device)
 	components = {
-		"backend": "moondream",
-		"model_id": model_id,
+		"backend": model_spec.backend_id,
+		"backend_family": "vit-gpt2",
+		"display_name": model_spec.display_name,
+		"model_id": model_spec.model.model_id,
 		"model": model,
+		"feature_extractor": feature_extractor,
+		"tokenizer": tokenizer,
 		"device": device,
 		"prompt": prompt,
-		"max_dimension": 720,
+		"max_dimension": model_spec.max_dimension,
 	}
 	return components
+
+
+#============================================
+def close_ai_components(ai_components: dict | None) -> None:
+	"""Release native caption resources held by one component map."""
+	if ai_components is None:
+		return
+	if ai_components["backend_family"] == "moondream":
+		screenshot_lib.moondream_photon.close_captioner(ai_components)

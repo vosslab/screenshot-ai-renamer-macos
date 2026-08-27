@@ -32,16 +32,20 @@ a selectable provider. Ollama may reason verbosely, then places the selected slu
 inside a `<filename>` XML element. Both provider adapters return complete
 response text to the shared XML extraction path.
 
+See `docs/MODELS.md` before changing a model or moving the pipeline to another
+Apple Silicon Mac.
+
 Model choices are intentionally not production CLI flags because they rarely
-change between runs. Customize these constants in
+change between runs. Customize the model identity in
+`screenshot_lib/model_catalog.py` and provider behavior in
 [`screenshot_lib/filename_models.py`](../screenshot_lib/filename_models.py):
 
 - `DEFAULT_FILENAME_BACKEND`: `ollama` or `apple`.
-- `DEFAULT_FILENAME_MODEL`: any installed Ollama model name.
+- `QWEN_FILENAME_MODEL`: the installed Ollama model identity.
 - `FILENAME_MODEL_THINKING`: remains `True` for filename generation.
 
 The Apple provider uses the OS-selected system model, so
-`DEFAULT_FILENAME_MODEL` applies only to Ollama. Neither provider request sets an
+`QWEN_FILENAME_MODEL` applies only to Ollama. Neither provider request sets an
 output-token budget.
 
 ## Caption prompt
@@ -53,9 +57,10 @@ source source_me.sh && python screenshot-renamer.py \
 	--caption-prompt "Describe the screenshot's main task and application."
 ```
 
-The custom question applies to Moondream. ViT-GPT2 remains a literal caption
-backend and does not accept text prompts. Apple MPS continues to use Moondream2
-because Moondream3 Preview requires unsupported FlexAttention operations.
+The custom question applies to whichever Moondream runtime is active. ViT-GPT2
+remains a literal caption backend and does not accept text prompts. Moondream 3.1
+uses Photon Metal. If Photon is unavailable, the pipeline omits its result and
+continues with OCR plus ViT-GPT2 through PyTorch MPS.
 
 ## CLI options
 

@@ -3,46 +3,77 @@
 ## 2026-08-27
 
 ### Behavior or Interface Changes
-- Preload both production image-caption backends during setup: the compatible
-  Moondream model plus ViT-GPT2 and its processor and tokenizer.
+- Add `docs/MODELS.md` as the Mac-only authority for model identity, hardware,
+  unified-memory, accelerator, cache, and native-runtime requirements.
+- Centralize machine-readable model identities and requirements in
+  `screenshot_lib/model_catalog.py`; keep SDK adapters independent of model
+  selection and remove unused pre-production backend aliases.
+- Distinguish the unpinned `moondream` Python SDK version from the Moondream 3.1
+  model it loads so Kestrel bridge errors are not mistaken for model selection.
+- Make Moondream 3.1 the primary captioner through Photon's native Metal
+  runtime on Apple Silicon Macs with at least 24 GB of unified memory.
+- Keep ViT-GPT2 as an independent PyTorch MPS captioner. Omit an unavailable or
+  invalid backend while continuing with OCR and any remaining visual evidence.
+- Remove the pre-production Moondream2 backend and Transformers compatibility
+  shim after live validation demonstrated unusable repeated-token output.
+- Report Photon validation as ready, memory-skipped, or runtime-unavailable;
+  continue model setup with the independent ViT-GPT2 MPS captioner when needed.
+- Exercise real captions from Photon and ViT-GPT2 during model installation,
+  report detected unified memory, and skip Photon below 24 GB.
 - Rename the caption-model setup command to `install_models.py` and update the
   active documentation routes to match its broader responsibility.
 - Render model setup with Rich panels, ASCII section rules, and consistent status
   labels for dependencies, Apple acceleration, model loading, cleanup, and success.
+- Phrase model-setup output around the actions it performs. Remove the unrelated
+  CPU, CUDA, Neural Engine, and Ollama notes from the successful setup path.
 - Require Apple MPS for local PyTorch caption inference instead of silently
   falling back to CPU or CUDA.
-- After both current caption models load successfully, purge explicitly retired
-  project models from the Hugging Face cache while preserving active revisions,
-  unrelated Hugging Face models, and Ollama models.
+- After required caption validation, purge explicitly retired Moondream2 and
+  Moondream3 Preview repositories while preserving unrelated Hugging Face and
+  Ollama models.
 
 ### Fixes and Maintenance
+- Reject empty and repeated-token captions such as the observed `KeKeKe`
+  generation collapse before they reach the filename model.
+- Reject compressed mixed-token loops and runaway captions after live MPS
+  validation exposed a 2,706-character `Phot`/`Mc`/`PotSup` generation collapse.
+- Record that live Photon 2.1.0 validation fails with Torch 2.13 because its
+  native MPS bridge currently supports Torch only through 2.12.
+- Bound Torch to `>=2.12,<2.13` and its paired Torchvision release to
+  `>=0.27,<0.28`. This permits patch upgrades while preventing pip from crossing
+  the native Photon bridge's supported minor-version boundary.
 - Declare Torchvision as a direct runtime dependency so pip upgrades it with
   Torch instead of retaining an incompatible previously installed wheel.
 - Make the Moondream installer upgrade the complete dependency set before model
   preload, preventing stale Torchvision native extensions from breaking
   Transformers imports with a missing `torchvision::nms` operator.
-- Scope the Moondream2 tied-weights compatibility adapter to Moondream2's
-  dynamically loaded model class so the shared Transformers base class remains
-  untouched and ViT-GPT2 initializes normally under Transformers 5.
 - Filter only the obsolete ViT-GPT2 `masked_bias` checkpoint buffers from its
   load report while preserving all other model compatibility warnings.
-- Update Moondream installation and troubleshooting guidance for the supported
-  Transformers 5 path, coordinated Torch/Torchvision upgrades, and complete
-  image-caption model setup.
+- Store all usable captions in image metadata rather than assuming the primary
+  Moondream caption exists.
+- Keep only durable caption-quality and macOS-requirement pytest coverage;
+  classify mocked installer wiring, catalog-shape checks, live model loads,
+  dependency imports, and cache-purge proof as one-time implementation checks.
 
 ### Decisions and Failures
+- Treat Photon's native Metal kernels as the preferred Apple GPU path while
+  preserving an independent PyTorch MPS caption path.
+- Record that Moondream3 Preview remains unsuitable through Transformers on MPS;
+  Moondream 3.1 avoids that limitation through the official Photon runtime.
 - Keep `ollama pull qwen3.5:27b` separate from `install_models.py` while
   preserving the intended path back to Apple's system filename models.
-- Select the newest caption model proven on the required Apple accelerator,
-  which keeps Moondream2 in production while Moondream3 Preview requires
-  FlexAttention that PyTorch MPS does not support.
+- Use the codebase's pre-production state to remove failed legacy caption paths
+  instead of maintaining compatibility aliases and shims.
 
 ### Developer Tests and Notes
-- Confirm all 722 fast tests pass under Python 3.12 after the dependency,
+- Confirm all 789 fast tests pass under Python 3.12 after the dependency,
   installer, loader, and documentation changes.
-- Verify Torch 2.13.0, Torchvision 0.28.0, and Transformers 5.16.1 import
-  together; preload Moondream2 followed by ViT-GPT2 in one process; and run a
-  real ViT-GPT2 caption against a screenshot successfully.
+- Confirm pip resolves the bounded pair to Torch 2.12.1 and Torchvision 0.27.1
+  on the target Mac. Run real Moondream 3.1 Photon Metal and ViT-GPT2 MPS
+  captions successfully with that pair.
+- Record that the shared Python installation also contains unrelated Torchaudio
+  2.10.0, whose own exact Torch 2.10 dependency remains inconsistent. The
+  screenshot application does not import or declare Torchaudio.
 
 ## 2026-08-25
 

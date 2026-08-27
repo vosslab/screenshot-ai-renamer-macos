@@ -20,6 +20,10 @@ source source_me.sh && python screenshot-renamer.py -t
 source source_me.sh && python screenshot-renamer.py --dry-run
 ```
 
+Moondream 3.1 runs locally through native Photon Metal on Macs with at least
+24 GB of unified memory. ViT-GPT2 remains independently available through
+PyTorch MPS when Photon cannot run.
+
 ## Usage
 
 ```bash
@@ -28,12 +32,14 @@ source source_me.sh && python screenshot-renamer.py
 source source_me.sh && python screenshot-renamer.py --directory /path/to/screenshots
 ```
 
-Filename model defaults are centralized in
+Model identities are centralized in `screenshot_lib/model_catalog.py`.
+Filename provider behavior remains in
 [`screenshot_lib/filename_models.py`](screenshot_lib/filename_models.py).
 
 ## Documentation
 
 - [AGENTS.md](AGENTS.md): Agent pipeline overview and repo-specific workflow rules.
+- `docs/MODELS.md`: Mac hardware, model, accelerator, memory, and runtime compatibility.
 - [docs/INSTALL.md](docs/INSTALL.md): Requirements and setup details.
 - [docs/USAGE.md](docs/USAGE.md): CLI options and examples.
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md): Common failures and fixes.

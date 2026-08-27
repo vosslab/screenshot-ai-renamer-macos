@@ -5,17 +5,24 @@ vision-language captioners, and a text-only LLM that condenses everything into a
 filename. This document explains how they coordinate so you can adjust prompts or
 swap in new models confidently.
 
+`docs/MODELS.md` is the authority for Mac hardware, accelerator, memory, model,
+and native-runtime requirements. `screenshot_lib/model_catalog.py` is the code
+authority for model identities and machine-readable requirements.
+
 ## Flow Overview
 
 1. **Finder** - `screenshot-renamer.py` scans the target directory for macOS
    screenshots (`Screen*.png`).
 2. **OCR Agent** - `screenshot_lib/extract_text.py` runs Tesseract to capture every bit of
    on-screen text. Its output is passed unchanged to downstream agents.
-3. **Caption Agents** - `screenshot_lib/generate_caption.py` loads both backends:
-   - `moondream` uses the newest model validated for the required Apple MPS
-     runtime. That is currently Moondream2; Moondream3 Preview's path requires
-     FlexAttention, which PyTorch MPS does not support.
-   - `vit-gpt2` produces literal summaries of visible text and layout.
+3. **Caption Agents** - `screenshot_lib/generate_caption.py` coordinates the
+   modular caption backends:
+   - `screenshot_lib/moondream_photon.py` runs Moondream 3.1 through Photon's
+     native Metal runtime on Apple Silicon Macs with at least 24 GB of memory.
+   - `vit-gpt2` produces literal summaries through PyTorch MPS and remains
+     available when Photon cannot run.
+   - Broken or unavailable caption backends are omitted; OCR and any other
+     usable caption remain available to the filename model.
 4. **Aggregator** - `_compose_caption_payload()` in `screenshot-renamer.py`
    merges OCR text and all captions, adding a model note that reminds the final
    LLM how to weigh Moondream vs. ViT-GPT2 if both are present.
@@ -31,8 +38,8 @@ swap in new models confidently.
 ## Prompt Design
 
 - **OCR block** contains the complete text Tesseract observed.
-- **Caption block** contains one section per backend (e.g., "Moondream caption"
-  and "Vit Gpt2 caption"). This redundancy gives the filename agent richer
+- **Caption block** contains one section per resolved backend (for example,
+  "Moondream3.1 Photon caption" and "Vit Gpt2 caption"). This gives the filename agent richer
   context for ambiguous screenshots.
 - **Model note** retains the established guidance that Moondream is richer while
   ViT-GPT2 is more literal.
@@ -43,11 +50,11 @@ swap in new models confidently.
 
 ## Filename LLM
 
-`screenshot_lib/filename_models.py` is the single authority for filename
-model configuration:
+`screenshot_lib/model_catalog.py` owns model identities and requirements.
+`screenshot_lib/filename_models.py` owns filename-provider behavior:
 
 - `DEFAULT_FILENAME_BACKEND` selects `ollama` or `apple`.
-- `DEFAULT_FILENAME_MODEL` selects the installed Ollama model.
+- `QWEN_FILENAME_MODEL` selects the installed Ollama model identity.
 - `FILENAME_MODEL_THINKING` remains enabled for filename generation.
 - Filename requests allow the model to determine its full response length.
 
@@ -62,11 +69,12 @@ and returns unrestricted response text to the same XML extraction path.
 
 ## Extending the Agents
 
-- **Add new captioners** by extending `screenshot_lib/generate_caption.py` with another
-  backend and invoking it from `screenshot-renamer.py` alongside the defaults.
-- **Customize filename models** by editing the centralized constants in
-  `screenshot_lib/filename_models.py`. Keep stable model settings in these
-  constants and reserve the production CLI for frequent per-run choices.
+- **Add new captioners** as focused adapter modules under `screenshot_lib/`, then
+  register their orchestration in `screenshot_lib/generate_caption.py`.
+- **Customize filename model identity** in `screenshot_lib/model_catalog.py`.
+  Keep provider selection and request behavior in
+  `screenshot_lib/filename_models.py`; reserve the production CLI for frequent
+  per-run choices.
 - **Evaluate prompt changes** with `tests/e2e/e2e_filename_prompt_eval.py`
   before changing defaults.
 - **Metadata** - if you add extra context, update `screenshot_lib/update_metadata.py` to
@@ -75,9 +83,10 @@ and returns unrestricted response text to the same XML extraction path.
 Keep this file updated whenever the coordination logic changes; it's the quick
 reference for anyone debugging or tuning the agent stack.
 
-`install_models.py` validates both current caption models before it deletes any
-explicitly retired project-model repositories from the Hugging Face cache. Keep
-the retired allowlist narrow; never purge unrelated Hugging Face or Ollama models.
+`install_models.py` exercises Photon and ViT-GPT2 before it deletes explicitly
+retired project-model repositories, including the removed Moondream2 backend.
+Keep the retired allowlist narrow; never purge unrelated Hugging Face models or
+Ollama models.
 
 ## Human guidance
 

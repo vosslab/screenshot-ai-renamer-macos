@@ -1,7 +1,44 @@
 import os
+import sys
+import platform
 
 import torch
 from PIL import Image
+
+#============================================
+def require_apple_silicon() -> str:
+	"""Require the Apple Silicon platform used by Photon's Metal runtime."""
+	if sys.platform != "darwin" or platform.machine() != "arm64":
+		raise RuntimeError(
+			"Photon Metal captioning requires an Apple Silicon Mac running macOS."
+		)
+	runtime = "metal"
+	return runtime
+
+
+#============================================
+def get_total_memory_bytes() -> int:
+	"""Return the physical unified-memory capacity visible to macOS."""
+	page_size = os.sysconf("SC_PAGE_SIZE")
+	page_count = os.sysconf("SC_PHYS_PAGES")
+	total_memory = page_size * page_count
+	return total_memory
+
+
+#============================================
+def require_macos_version(minimum_major: int, component_name: str) -> int:
+	"""Require the minimum macOS major version for a local model runtime."""
+	version_text = platform.mac_ver()[0]
+	if not version_text:
+		raise RuntimeError(f"Cannot determine macOS version for {component_name}.")
+	major_version = int(version_text.split(".")[0])
+	if major_version < minimum_major:
+		raise RuntimeError(
+			f"{component_name} requires macOS {minimum_major} or later; "
+			f"this Mac reports macOS {major_version}."
+		)
+	return major_version
+
 
 #============================================
 def get_mps_device() -> str:
@@ -47,20 +84,6 @@ def resize_image(image: Image.Image, max_dimension: int) -> Image.Image:
 		Image.Resampling.LANCZOS if hasattr(Image, "Resampling") else Image.LANCZOS
 	)
 	return image.resize((new_width, new_height), resample_filter)
-
-#============================================
-def get_attention_mask(pixel_values: torch.Tensor, device: str) -> torch.Tensor:
-	"""
-	Create an attention mask matching the pixel tensor size for encoder-decoder models.
-
-	Args:
-		pixel_values (torch.Tensor): Image tensor returned by a feature extractor.
-		device (str): Device to allocate the mask on.
-
-	Returns:
-		torch.Tensor: Attention mask of ones sized to the first two dims of pixel_values.
-	"""
-	return torch.ones(pixel_values.shape[:2], dtype=torch.long, device=device)
 
 #============================================
 def get_image_paths(directory: str) -> list[str]:

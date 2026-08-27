@@ -8,13 +8,14 @@
   Tesseract, and libvips.
 - [CLAUDE.md](../CLAUDE.md): Claude-specific instructions for environments that
   use that file.
-- [LICENSE](../LICENSE): project license.
+- [LICENSE.GPL-3.0](../LICENSE.GPL-3.0): project license.
 - [README.md](../README.md): short project overview, quick start, and core
   documentation links.
+- `docs/MODELS.md`: Mac-only model, accelerator, memory, package,
+  and native-runtime compatibility reference.
 - [install_models.py](../install_models.py): installs runtime Python
-  dependencies and preloads the local Moondream and ViT-GPT2 caption models for
-  the required Apple MPS runtime, then removes explicitly retired project models
-  from the Hugging Face cache.
+  dependencies, validates Photon Metal and MPS caption models, then removes
+  explicitly retired caption models.
 - [pip_requirements.txt](../pip_requirements.txt): runtime Python dependencies.
 - [pip_requirements-dev.txt](../pip_requirements-dev.txt): developer and test
   dependencies.
@@ -38,18 +39,22 @@
 
 ### [screenshot_lib/](../screenshot_lib/)
 
-- [screenshot_lib/common_func.py](../screenshot_lib/common_func.py): required
-  Apple MPS validation plus image resize, attention-mask, and image discovery
-  helpers.
+- [screenshot_lib/common_func.py](../screenshot_lib/common_func.py): Apple
+  Silicon, unified-memory, and MPS validation plus shared image helpers.
+- `screenshot_lib/caption_quality.py`: empty-caption and repeated-token
+  collapse detection.
+- `screenshot_lib/model_catalog.py`: model identities and machine-readable Mac
+  runtime requirements, independent of SDK adapters.
 - [screenshot_lib/filename_models.py](../screenshot_lib/filename_models.py):
-  filename model configuration and dispatch.
+  filename-provider selection, request behavior, and dispatch.
 - [screenshot_lib/apple_models.py](../screenshot_lib/apple_models.py): official
   Apple Foundation Models SDK adapter.
 - [screenshot_lib/ollama_models.py](../screenshot_lib/ollama_models.py): local
   Ollama chat wrapper for filename generation.
 - [screenshot_lib/extract_text.py](../screenshot_lib/extract_text.py): Tesseract OCR helper.
-- [screenshot_lib/generate_caption.py](../screenshot_lib/generate_caption.py): Moondream and
-  ViT-GPT2 caption backend setup and inference.
+- [screenshot_lib/generate_caption.py](../screenshot_lib/generate_caption.py):
+  shared caption dispatch and ViT-GPT2 setup.
+- `screenshot_lib/moondream_photon.py`: Moondream 3.1 Photon Metal adapter.
 - [screenshot_lib/intelligent_filename.py](../screenshot_lib/intelligent_filename.py): filename
   prompt construction and response validation.
 - [screenshot_lib/xml_response.py](../screenshot_lib/xml_response.py): XML
@@ -72,6 +77,8 @@
   annotation gate (builtin generics and PEP 604 unions, no `typing`).
 - [tests/test_filename_generation.py](../tests/test_filename_generation.py):
   filename normalization, evidence-preservation, and XML-response tests.
+- `tests/test_caption_quality.py`: caption-collapse and runaway-output checks.
+- `tests/test_common_func.py`: Mac runtime requirement checks.
 - [tests/test_bandit_security.py](../tests/test_bandit_security.py): Bandit
   security gate.
 - [tests/test_pyflakes_code_lint.py](../tests/test_pyflakes_code_lint.py):
@@ -132,6 +139,7 @@
 
 - [docs/CODE_ARCHITECTURE.md](CODE_ARCHITECTURE.md): component overview and
   primary data flow.
+- `docs/MODELS.md`: Mac model and runtime requirements.
 - [docs/FILE_STRUCTURE.md](FILE_STRUCTURE.md): this file map.
 - [docs/INSTALL.md](INSTALL.md): setup requirements and install steps.
 - [docs/USAGE.md](USAGE.md): CLI usage and examples.

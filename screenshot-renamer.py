@@ -153,7 +153,8 @@ def _compose_caption_payload(captions: list[tuple[str, str]]) -> tuple[str, str 
 		parts.append(f"{label} caption:\n{caption.strip() or 'N/A'}")
 
 	model_note = None
-	if {"moondream", "vit-gpt2"}.issubset(backends):
+	has_moondream = any(backend.startswith("moondream") for backend in backends)
+	if has_moondream and "vit-gpt2" in backends:
 		model_note = (
 			"In practice Moondream tends to produce richer, more context-aware descriptions than "
 			"ViT-GPT2, which is more literal. Blend both perspectives when deciding on the filename."
@@ -173,7 +174,7 @@ def get_image_size(image_path: str) -> tuple[int, int]:
 
 def process_image(
 	image_path: str,
-	ai_components: dict,
+	ai_components: dict | None,
 	dry_run: bool,
 	secondary_ai_components: dict | None = None,
 )-> bool:
@@ -182,7 +183,7 @@ def process_image(
 
 		Args:
 			image_path (str): Path to the image file.
-			ai_components (dict): Primary AI model components.
+			ai_components (dict | None): Optional primary caption-model components.
 			dry_run (bool): If True, only prints changes without modifying files.
 			secondary_ai_components (dict | None): Optional second caption backend.
 
@@ -239,22 +240,34 @@ def process_image(
 	print(format_preview(ocr_text))
 	print(colorize(f"Time taken for OCR: {ocr_time:.2f} seconds", Ansi.GREEN))
 
-	print(colorize(f"\nStarting Caption ({ai_components['backend']})...", Ansi.YELLOW))
-	start_time = time.time()
-	try:
-		ai_caption = screenshot_lib.generate_caption.generate_caption(image_path, ai_components)
-	except FileNotFoundError:
-		print(colorize(f"Skipping missing file during caption: {filename}", Ansi.YELLOW))
-		return False
-	caption_time = time.time() - start_time
-	print(colorize("Caption Results:", Ansi.BLUE))
-	print(format_preview(ai_caption))
-	print(colorize(f"Time taken for caption generation: {caption_time:.2f} seconds", Ansi.GREEN))
-	captions = [(ai_components["backend"], ai_caption)]
+	captions = []
+	if ai_components:
+		backend_name = ai_components["display_name"]
+		print(colorize(f"\nStarting Caption ({backend_name})...", Ansi.YELLOW))
+		start_time = time.time()
+		try:
+			ai_caption = screenshot_lib.generate_caption.generate_caption(
+				image_path,
+				ai_components,
+			)
+		except FileNotFoundError:
+			print(colorize(f"Skipping missing file during caption: {filename}", Ansi.YELLOW))
+			return False
+		except Exception as exc:  # Native caption runtimes use different exception types.
+			print(colorize(f"Caption unavailable: {exc}", Ansi.YELLOW))
+		else:
+			caption_time = time.time() - start_time
+			print(colorize("Caption Results:", Ansi.BLUE))
+			print(format_preview(ai_caption))
+			print(colorize(
+				f"Time taken for caption generation: {caption_time:.2f} seconds",
+				Ansi.GREEN,
+			))
+			captions.append((ai_components["backend"], ai_caption))
 
 	if secondary_ai_components:
 		print(colorize(
-			f"\nStarting Secondary Caption ({secondary_ai_components['backend']})...",
+			f"\nStarting Secondary Caption ({secondary_ai_components['display_name']})...",
 			Ansi.YELLOW,
 		))
 		start_time = time.time()
@@ -269,11 +282,20 @@ def process_image(
 				Ansi.YELLOW,
 			))
 			return False
-		secondary_time = time.time() - start_time
-		print(colorize("Secondary Caption Results:", Ansi.BLUE))
-		print(format_preview(secondary_caption))
-		print(colorize(f"Time taken for secondary caption: {secondary_time:.2f} seconds", Ansi.GREEN))
-		captions.append((secondary_ai_components["backend"], secondary_caption))
+		except Exception as exc:  # Native caption runtimes use different exception types.
+			print(colorize(f"Secondary caption unavailable: {exc}", Ansi.YELLOW))
+		else:
+			secondary_time = time.time() - start_time
+			print(colorize("Secondary Caption Results:", Ansi.BLUE))
+			print(format_preview(secondary_caption))
+			print(colorize(
+				f"Time taken for secondary caption: {secondary_time:.2f} seconds",
+				Ansi.GREEN,
+			))
+			captions.append((secondary_ai_components["backend"], secondary_caption))
+
+	if not captions:
+		print(colorize("No usable visual captions; continuing with OCR only.", Ansi.YELLOW))
 
 	clear_gpu_memory()
 
@@ -329,7 +351,7 @@ def process_image(
 			screenshot_lib.update_metadata.write_exif_metadata(
 				new_path,
 				ocr_text,
-				ai_caption,
+				caption_payload,
 			)
 		except FileNotFoundError:
 			print(colorize(
@@ -443,16 +465,16 @@ def main() -> None:
 		summary += f" Skipping {len(already_renamed)} already renamed files."
 	print(colorize(f"{summary} {mode}.", Ansi.BOLD))
 
-	try:
-		import screenshot_lib.generate_caption as generate_caption
+	import screenshot_lib.generate_caption as generate_caption
 
+	ai_components = None
+	try:
 		ai_components = generate_caption.setup_ai_components(
 			prompt=args.caption_prompt,
 			backend="moondream",
 		)
 	except Exception as exc:  # pylint: disable=broad-exception-caught
-		print(f"Failed to load Moondream backend: {exc}")
-		raise
+		print(colorize(f"Moondream 3.1 Photon unavailable: {exc}", Ansi.YELLOW))
 
 	try:
 		secondary_ai_components = generate_caption.setup_ai_components(
@@ -463,11 +485,15 @@ def main() -> None:
 		print(f"Failed to load ViT-GPT2 backend: {exc}")
 		secondary_ai_components = None
 
-	print("\nCaption backends: Moondream", end="")
+	caption_backend_names = []
+	if ai_components:
+		caption_backend_names.append(ai_components["display_name"])
 	if secondary_ai_components:
-		print(" + ViT-GPT2")
+		caption_backend_names.append(secondary_ai_components["display_name"])
+	if caption_backend_names:
+		print(f"\nCaption backends: {' + '.join(caption_backend_names)}")
 	else:
-		print(" (ViT-GPT2 unavailable)")
+		print(colorize("\nCaption backends: none; using OCR only.", Ansi.YELLOW))
 	print(f"Filename model: {filename_description}")
 	if args.caption_prompt:
 		print(colorize(
@@ -522,6 +548,9 @@ def main() -> None:
 		))
 	if skipped:
 		print(colorize(f"Skipped {skipped} images (missing/disappeared).", Ansi.YELLOW))
+
+	generate_caption.close_ai_components(ai_components)
+	generate_caption.close_ai_components(secondary_ai_components)
 
 
 if __name__ == "__main__":

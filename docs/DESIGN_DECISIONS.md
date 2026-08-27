@@ -28,30 +28,33 @@ authoritative code or contract document, rather than a person.
 
 ### Apple-accelerated caption models
 
-**Decision.** Require Apple MPS for the PyTorch caption pipeline and select
-Moondream2 while Moondream3 Preview depends on unsupported FlexAttention.
+**Decision.** Use Moondream 3.1 through Photon's native Metal runtime as the
+primary captioner on Macs with at least 24 GB of unified memory. Use ViT-GPT2
+through PyTorch MPS as independent caption evidence when Photon is unavailable.
 
-**Why.** Local caption inference must use a supported Apple accelerator instead
-of silently falling back to CPU or selecting a newer incompatible model.
+**Why.** Photon provides the newer model through an official Apple GPU path.
+ViT-GPT2 preserves an accelerated visual path without retaining Moondream2,
+which produced unusable repeated-token output during live validation.
 
-**Consequence.** A caption model becomes the default only after successful MPS
-loading and inference. Apple system models retain OS-managed accelerator
-selection.
+**Consequence.** The installer exercises every applicable caption backend. The
+runtime rejects empty, runaway, or repetitive output and omits a failed backend
+without stopping OCR or another captioner. CPU and CUDA caption fallbacks remain
+disabled.
 
-**Owner.** [screenshot_lib/common_func.py](../screenshot_lib/common_func.py) and
+**Owner.** The `screenshot_lib/model_catalog.py` specification and
 [screenshot_lib/generate_caption.py](../screenshot_lib/generate_caption.py).
 
 ### Retired caption-model cleanup
 
-**Decision.** After both current caption models load successfully, delete every
-cached revision belonging to an explicitly retired project-model repository.
+**Decision.** After the required caption paths pass inference, delete explicitly
+retired model repositories.
 
 **Why.** Replaced vision models can consume many gigabytes and are no longer
 useful to this pipeline, but a broad cache purge could delete unrelated models.
 
-**Consequence.** Add retired project repositories to the narrow allowlist in
-`install_models.py`. Keep active-model revisions, unrelated Hugging Face models,
-and Ollama models untouched.
+**Consequence.** Keep the allowlist narrow. Remove Moondream2 and Moondream3
+Preview while preserving Photon weights, unrelated Hugging Face models, and
+Ollama models.
 
 **Owner.** [install_models.py](../install_models.py).
 

@@ -1,5 +1,8 @@
 # Troubleshooting
 
+Use `docs/MODELS.md` to distinguish model limitations, unified-memory limits,
+accelerator availability, and native Python ABI failures.
+
 ## Ollama connection failed
 - Confirm Ollama is running with `ollama list`.
 - Launch the Ollama app or run `ollama serve` in another terminal.
@@ -9,8 +12,8 @@
 ## Ollama model is too slow
 
 Thinking remains enabled for filename generation. Evaluate a smaller installed
-model by changing `DEFAULT_FILENAME_MODEL` in
-`screenshot_lib/filename_models.py`, then run the committed E2E filename cases
+model by changing `QWEN_FILENAME_MODEL` in
+`screenshot_lib/model_catalog.py`, then run the committed E2E filename cases
 before accepting the new default.
 
 ## Apple Foundation Models generation fails
@@ -47,13 +50,17 @@ model reports a context error, choose a model with a larger context window.
 
 ## Slow or hot GPU
 
-All generation runs on-device. Close other GPU-heavy apps and reduce batch size.
+All generation runs on-device. Close other GPU-heavy apps. Moondream 3.1 fits on
+Apple Silicon with at least 24 GB, but running it alongside the default
+`qwen3.5:27b` filename model can create additional memory pressure on 32 GB and
+36 GB Macs. Close other GPU-heavy applications or select a smaller Ollama model
+in `screenshot_lib/model_catalog.py` if the complete pipeline swaps heavily.
 
 ## Apple MPS is unavailable
 
-The local caption models require Apple GPU acceleration through PyTorch MPS.
-The application intentionally does not fall back to CPU or CUDA. Confirm the
-Mac uses Apple Silicon and that Python is loading the macOS arm64 PyTorch build:
+ViT-GPT2 requires Apple GPU acceleration through PyTorch MPS. The application
+intentionally does not fall back to CPU or CUDA. Confirm the Mac uses Apple
+Silicon and that Python is loading the macOS arm64 PyTorch build:
 
 ```bash
 source source_me.sh && python -c \
@@ -64,16 +71,34 @@ Both values must be `True`. If MPS is built but unavailable, run the command in
 the normal macOS terminal rather than a restricted environment that cannot
 access Metal devices.
 
-## Moondream3 FlexAttention error on MPS
+## Moondream3 Preview FlexAttention error
 
 Moondream3 Preview's Transformers path uses FlexAttention, which does not run on
-PyTorch MPS. The repo therefore enforces Moondream2 as the local Moondream
-caption backend even while Moondream3 is available. After dependency or model
-changes, preload the caption models:
+PyTorch MPS. The application uses Moondream 3.1 through the official Photon
+Metal runtime instead. After dependency or model changes, validate all caption
+paths:
 
 ```bash
 source source_me.sh && python install_models.py
 ```
+
+## Photon is unavailable
+
+The CLI reports the reason when Photon setup, inference, or caption validation
+fails. Run `install_models.py` to reproduce the failure with a small validation
+image. The screenshot pipeline continues with OCR and ViT-GPT2 MPS. Empty,
+runaway, or repetitive output is rejected rather than forwarded to the filename
+model.
+
+If Photon reports that `kestrel-mps-torch-ext` does not support the installed
+PyTorch minor, the installed environment predates the current dependency
+constraints or contains packages installed outside this project. Run
+`install_models.py` without `--skip-pip`. It selects a Torch 2.12 patch and the
+paired Torchvision 0.27 patch before validating Photon again.
+
+Moondream2 is not used as a fallback. Live validation produced a 2,706-character
+repeated-token collapse, so the pre-production backend and its Transformers shim
+were removed instead of retained as legacy compatibility code.
 
 ## Torchvision NMS operator is missing
 

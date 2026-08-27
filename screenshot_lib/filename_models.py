@@ -1,5 +1,7 @@
 """Configure and run the local text model used for screenshot filenames."""
 
+import screenshot_lib.model_catalog
+
 APPLE_FILENAME_BACKEND = "apple"
 OLLAMA_FILENAME_BACKEND = "ollama"
 SUPPORTED_FILENAME_BACKENDS = (
@@ -7,7 +9,6 @@ SUPPORTED_FILENAME_BACKENDS = (
 	APPLE_FILENAME_BACKEND,
 )
 DEFAULT_FILENAME_BACKEND = OLLAMA_FILENAME_BACKEND
-DEFAULT_FILENAME_MODEL = "qwen3.5:27b"
 FILENAME_MODEL_THINKING = True
 
 
@@ -49,7 +50,8 @@ def describe_filename_model(
 	if resolved_backend == APPLE_FILENAME_BACKEND:
 		description = "Apple Foundation Models (official apple-fm-sdk)"
 	else:
-		description = f"Ollama {DEFAULT_FILENAME_MODEL} (thinking enabled)"
+		model_id = screenshot_lib.model_catalog.QWEN_FILENAME_MODEL.model_id
+		description = f"Ollama {model_id} (thinking enabled)"
 	return description
 
 
@@ -83,7 +85,7 @@ def run_filename_model(
 	response = screenshot_lib.ollama_models.run_ollama_model(
 		prompt,
 		instructions,
-		DEFAULT_FILENAME_MODEL,
+		screenshot_lib.model_catalog.QWEN_FILENAME_MODEL.model_id,
 		FILENAME_MODEL_THINKING,
 	)
 	return response
@@ -108,4 +110,5 @@ def unit_test(
 
 	import screenshot_lib.ollama_models
 
-	screenshot_lib.ollama_models.unit_test(DEFAULT_FILENAME_MODEL, FILENAME_MODEL_THINKING)
+	model_id = screenshot_lib.model_catalog.QWEN_FILENAME_MODEL.model_id
+	screenshot_lib.ollama_models.unit_test(model_id, FILENAME_MODEL_THINKING)

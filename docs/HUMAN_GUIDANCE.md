@@ -12,10 +12,15 @@ origin belongs there too. Rules: [REPO_STYLE.md](REPO_STYLE.md).
 
 - We will keep `ollama pull qwen3.5:27b` out of `install_models.py` for now.
 - Eventually I would like to go back to the Apple models.
-- We should enforce models supported by Apple GPU or Neural Engine acceleration,
-  which is why we use Moondream2 even when Moondream3 is available.
+- Use newer Moondream models when they support Apple acceleration. Make
+  Moondream 3.1 through Photon the primary path and retain an independent MPS
+  caption path without preserving a broken legacy Moondream model.
 - It would be nice to purge old models when installing new ones.
 
 ## Review expectations
 
 ## Working style
+
+- Phrase instructions as positive actions. Omit unwanted tools and behaviors
+  when the desired path is clear; state a prohibition when correctness or
+  safety requires the boundary.
