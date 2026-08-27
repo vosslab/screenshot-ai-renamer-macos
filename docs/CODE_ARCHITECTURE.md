@@ -19,14 +19,15 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
 - [screenshot-renamer.py](../screenshot-renamer.py): CLI orchestration, file
   discovery, dry-run/live mode handling, progress output, ETA reporting, and
   per-image processing.
-- [install_moondream.py](../install_moondream.py): installs the runtime
-  dependency set and preloads the local Moondream model selected for the active
-  device.
+- [install_models.py](../install_models.py): installs the runtime
+  dependency set and preloads the local Moondream and ViT-GPT2 caption models
+  after validating the required Apple MPS runtime, then removes explicitly
+  retired project models from the Hugging Face cache.
 - [screenshot_lib/extract_text.py](../screenshot_lib/extract_text.py): opens images with Pillow
   and extracts text through Tesseract via `pytesseract`.
 - [screenshot_lib/generate_caption.py](../screenshot_lib/generate_caption.py): loads caption
-  backends with Transformers. The primary backend is Moondream, selected by
-  active device compatibility; the secondary backend is ViT-GPT2.
+  backends with Transformers. The primary backend is MPS-compatible Moondream2;
+  the secondary backend is ViT-GPT2.
 - [screenshot_lib/intelligent_filename.py](../screenshot_lib/intelligent_filename.py):
   builds the established filename prompt, extracts the preferred XML result,
   and returns a sanitized PNG filename.
@@ -39,8 +40,9 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
   separated system and user messages to the selected local Ollama model.
 - [screenshot_lib/update_metadata.py](../screenshot_lib/update_metadata.py): writes OCR text and
   caption metadata into the renamed image through ExifTool.
-- [screenshot_lib/common_func.py](../screenshot_lib/common_func.py): shared image resizing,
-  device selection, attention-mask, and image-path helpers.
+- [screenshot_lib/common_func.py](../screenshot_lib/common_func.py): required
+  Apple MPS validation plus shared image resizing, attention-mask, and
+  image-path helpers.
 
 ## Data flow
 

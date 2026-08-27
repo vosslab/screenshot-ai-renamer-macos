@@ -28,7 +28,7 @@ LOCAL_IMPORT_WHITELIST = {
 	"local_llm_wrapper",
 }
 IMPORT_REQUIREMENT_ALIASES = {
-	"apple_fm_sdk": "apple-fm-sdk",
+	"applefoundationmodels": "apple-foundation-models",
 	"applescript": "py-applescript",
 	"bio": "biopython",
 	"bricklink": "python-bricklink-api",

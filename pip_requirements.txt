@@ -1,10 +1,13 @@
 accelerate
 apple-fm-sdk
+huggingface-hub
 lxml
 ollama
 pillow
 pyexiftool
 pytesseract
 pyvips
+rich
 torch
+torchvision
 transformers

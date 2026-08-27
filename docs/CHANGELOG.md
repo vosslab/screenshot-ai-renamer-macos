@@ -1,5 +1,49 @@
 # Changelog
 
+## 2026-08-27
+
+### Behavior or Interface Changes
+- Preload both production image-caption backends during setup: the compatible
+  Moondream model plus ViT-GPT2 and its processor and tokenizer.
+- Rename the caption-model setup command to `install_models.py` and update the
+  active documentation routes to match its broader responsibility.
+- Render model setup with Rich panels, ASCII section rules, and consistent status
+  labels for dependencies, Apple acceleration, model loading, cleanup, and success.
+- Require Apple MPS for local PyTorch caption inference instead of silently
+  falling back to CPU or CUDA.
+- After both current caption models load successfully, purge explicitly retired
+  project models from the Hugging Face cache while preserving active revisions,
+  unrelated Hugging Face models, and Ollama models.
+
+### Fixes and Maintenance
+- Declare Torchvision as a direct runtime dependency so pip upgrades it with
+  Torch instead of retaining an incompatible previously installed wheel.
+- Make the Moondream installer upgrade the complete dependency set before model
+  preload, preventing stale Torchvision native extensions from breaking
+  Transformers imports with a missing `torchvision::nms` operator.
+- Scope the Moondream2 tied-weights compatibility adapter to Moondream2's
+  dynamically loaded model class so the shared Transformers base class remains
+  untouched and ViT-GPT2 initializes normally under Transformers 5.
+- Filter only the obsolete ViT-GPT2 `masked_bias` checkpoint buffers from its
+  load report while preserving all other model compatibility warnings.
+- Update Moondream installation and troubleshooting guidance for the supported
+  Transformers 5 path, coordinated Torch/Torchvision upgrades, and complete
+  image-caption model setup.
+
+### Decisions and Failures
+- Keep `ollama pull qwen3.5:27b` separate from `install_models.py` while
+  preserving the intended path back to Apple's system filename models.
+- Select the newest caption model proven on the required Apple accelerator,
+  which keeps Moondream2 in production while Moondream3 Preview requires
+  FlexAttention that PyTorch MPS does not support.
+
+### Developer Tests and Notes
+- Confirm all 722 fast tests pass under Python 3.12 after the dependency,
+  installer, loader, and documentation changes.
+- Verify Torch 2.13.0, Torchvision 0.28.0, and Transformers 5.16.1 import
+  together; preload Moondream2 followed by ViT-GPT2 in one process; and run a
+  real ViT-GPT2 caption against a screenshot successfully.
+
 ## 2026-08-25
 
 ### Additions and New Features

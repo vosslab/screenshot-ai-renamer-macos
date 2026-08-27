@@ -6,15 +6,20 @@ from PIL import Image
 #============================================
 def get_mps_device() -> str:
 	"""
-	Detects the best available device for computation.
-	Returns "mps" for Apple Silicon, "cuda" for NVIDIA, or "cpu" as fallback.
+	Require Apple Metal GPU acceleration for local caption inference.
 	"""
-	if torch.backends.mps.is_available():
-		return "mps"
-	if torch.cuda.is_available():
-		return "cuda"
-	# CPU fallback keeps the script usable on machines without GPU acceleration.
-	return "cpu"
+	if not torch.backends.mps.is_built():
+		raise RuntimeError(
+			"PyTorch was installed without Apple MPS support. Install the macOS "
+			"arm64 PyTorch build before loading caption models."
+		)
+	if not torch.backends.mps.is_available():
+		raise RuntimeError(
+			"Apple MPS is unavailable. This project requires Apple Silicon with "
+			"Metal GPU support; unaccelerated CPU fallback is disabled."
+		)
+	device = "mps"
+	return device
 
 def resize_image(image: Image.Image, max_dimension: int) -> Image.Image:
 	"""

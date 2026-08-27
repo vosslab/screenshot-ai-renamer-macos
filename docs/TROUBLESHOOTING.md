@@ -49,12 +49,45 @@ model reports a context error, choose a model with a larger context window.
 
 All generation runs on-device. Close other GPU-heavy apps and reduce batch size.
 
+## Apple MPS is unavailable
+
+The local caption models require Apple GPU acceleration through PyTorch MPS.
+The application intentionally does not fall back to CPU or CUDA. Confirm the
+Mac uses Apple Silicon and that Python is loading the macOS arm64 PyTorch build:
+
+```bash
+source source_me.sh && python -c \
+	'import torch; print(torch.backends.mps.is_built(), torch.backends.mps.is_available())'
+```
+
+Both values must be `True`. If MPS is built but unavailable, run the command in
+the normal macOS terminal rather than a restricted environment that cannot
+access Metal devices.
+
 ## Moondream3 FlexAttention error on MPS
 
 Moondream3 Preview's Transformers path uses FlexAttention, which does not run on
-PyTorch MPS. On Apple Silicon, the repo uses Moondream2 for the local Moondream
-caption backend. After dependency or model changes, preload the compatible model:
+PyTorch MPS. The repo therefore enforces Moondream2 as the local Moondream
+caption backend even while Moondream3 is available. After dependency or model
+changes, preload the caption models:
 
 ```bash
-source source_me.sh && python install_moondream.py
+source source_me.sh && python install_models.py
 ```
+
+## Torchvision NMS operator is missing
+
+An error such as `RuntimeError: operator torchvision::nms does not exist`
+means the installed Torch and Torchvision wheels are incompatible. Upgrade the
+declared dependency set together, then preload Moondream again:
+
+```bash
+source source_me.sh && python install_models.py
+```
+
+## ViT-GPT2 reports unexpected masked-bias keys
+
+Older ViT-GPT2 checkpoints contain non-learned `masked_bias` attention buffers
+that current Transformers versions no longer use. The loader filters only those
+known-safe keys. Missing learned weights or any other unexpected keys remain
+visible as real compatibility warnings.

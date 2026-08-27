@@ -1,3 +1,6 @@
+# === LOCAL REPOSITORY RULES === [ADD CUSTOM IGNORES HERE]
+# Propagation preserves this section.
+
 # Byte-compiled / optimized / DLL files
 .DS_Store
 *.png
@@ -139,7 +142,9 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# === UNIVERSAL ===
+# === UNIVERSAL === [PROPAGATED - LOCAL EDITS OVERWRITTEN]
+/node_modules/
+/.env
 /report_*.txt
 /output*/
 /generated/
@@ -149,6 +154,5 @@ _temp*.?*
 /OTHER_REPOS/
 /LOCAL_ONLY/
 
-# === PYTHON ===
+# === PYTHON === [PROPAGATED - LOCAL EDITS OVERWRITTEN]
 site/
-

@@ -14,7 +14,7 @@ A local Python CLI for Mac users who want screenshots renamed from OCR, visual c
 
 ```bash
 brew bundle
-source source_me.sh && python install_moondream.py
+source source_me.sh && python install_models.py
 ollama pull qwen3.5:27b
 source source_me.sh && python screenshot-renamer.py -t
 source source_me.sh && python screenshot-renamer.py --dry-run

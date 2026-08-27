@@ -18,17 +18,31 @@ brew bundle
 
 The Brewfile installs Ollama, ExifTool, Tesseract, and libvips.
 
-## Python dependencies and Moondream setup
+## Python dependencies and caption setup
 
 ```bash
-source source_me.sh && python install_moondream.py
+source source_me.sh && python install_models.py
 ```
 
-This installs the Python dependency set and preloads the newest local Moondream
-model compatible with the active device. Apple MPS uses Moondream2 with
-Transformers 4.x because the current Transformers 5 path is broken for
-Moondream on MPS, and Moondream3 Preview requires FlexAttention, which is not
-supported on MPS.
+This installs the Python dependency set and preloads both local image-caption
+backends: Moondream2 plus ViT-GPT2 and its processor and tokenizer. Rich panels,
+section rules, and status labels distinguish dependencies, accelerator validation,
+each model, retired-model cleanup, and completion. The installer upgrades Torch
+and Torchvision together so their compiled extensions remain compatible.
+
+The caption pipeline requires Apple GPU acceleration through PyTorch MPS. It
+does not fall back to CPU or CUDA. Moondream2 remains selected even though
+Moondream3 Preview is available because the newer model requires FlexAttention,
+which PyTorch MPS does not support. PyTorch does not expose the Apple Neural
+Engine as a general device; Apple system models manage accelerator selection
+through macOS.
+
+After both current caption models load successfully, the installer removes
+explicitly retired project models from the Hugging Face cache. The current
+cleanup removes Moondream3 Preview and its Starmie tokenizer dependency. It does
+not delete active-model revisions, unrelated Hugging Face models, or Ollama
+models. The installer reports each repository and the expected recovered space
+before deletion.
 
 ## Filename model setup
 

@@ -12,9 +12,9 @@ swap in new models confidently.
 2. **OCR Agent** - `screenshot_lib/extract_text.py` runs Tesseract to capture every bit of
    on-screen text. Its output is passed unchanged to downstream agents.
 3. **Caption Agents** - `screenshot_lib/generate_caption.py` loads both backends:
-   - `moondream` uses the newest local Moondream model compatible with the active
-     device. Apple MPS uses Moondream2 with its MPS-compatible Transformers path;
-     Moondream3 Preview's path requires FlexAttention.
+   - `moondream` uses the newest model validated for the required Apple MPS
+     runtime. That is currently Moondream2; Moondream3 Preview's path requires
+     FlexAttention, which PyTorch MPS does not support.
    - `vit-gpt2` produces literal summaries of visible text and layout.
 4. **Aggregator** - `_compose_caption_payload()` in `screenshot-renamer.py`
    merges OCR text and all captions, adding a model note that reminds the final
@@ -74,6 +74,16 @@ and returns unrestricted response text to the same XML extraction path.
 
 Keep this file updated whenever the coordination logic changes; it's the quick
 reference for anyone debugging or tuning the agent stack.
+
+`install_models.py` validates both current caption models before it deletes any
+explicitly retired project-model repositories from the Hugging Face cache. Keep
+the retired allowlist narrow; never purge unrelated Hugging Face or Ollama models.
+
+## Human guidance
+
+See [docs/HUMAN_GUIDANCE.md](docs/HUMAN_GUIDANCE.md) for durable model-provider
+and installation preferences stated by the project owner.
+
 ## Coding Style
 See Python coding style in docs/PYTHON_STYLE.md.
 See Markdown style in docs/MARKDOWN_STYLE.md.

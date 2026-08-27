@@ -11,8 +11,10 @@
 - [LICENSE](../LICENSE): project license.
 - [README.md](../README.md): short project overview, quick start, and core
   documentation links.
-- [install_moondream.py](../install_moondream.py): installs runtime Python
-  dependencies and preloads the local Moondream model for the active device.
+- [install_models.py](../install_models.py): installs runtime Python
+  dependencies and preloads the local Moondream and ViT-GPT2 caption models for
+  the required Apple MPS runtime, then removes explicitly retired project models
+  from the Hugging Face cache.
 - [pip_requirements.txt](../pip_requirements.txt): runtime Python dependencies.
 - [pip_requirements-dev.txt](../pip_requirements-dev.txt): developer and test
   dependencies.
@@ -22,6 +24,8 @@
 - [REPO_TYPE](../REPO_TYPE): project type marker used by style propagation.
 - [VERSION](../VERSION): single-source version string, synced with packaging.
 - [docs/](.): durable project documentation and style guides.
+- [HUMAN_GUIDANCE.md](HUMAN_GUIDANCE.md): durable model-provider and
+  installation preferences stated by the project owner.
 - [screenshot_lib/](../screenshot_lib/): reusable OCR, captioning, filename,
   model, XML-response, and metadata modules.
 - [tools/](../tools/): standalone utility commands; application code does not
@@ -34,8 +38,9 @@
 
 ### [screenshot_lib/](../screenshot_lib/)
 
-- [screenshot_lib/common_func.py](../screenshot_lib/common_func.py): shared device, image resize,
-  attention-mask, and image discovery helpers.
+- [screenshot_lib/common_func.py](../screenshot_lib/common_func.py): required
+  Apple MPS validation plus image resize, attention-mask, and image discovery
+  helpers.
 - [screenshot_lib/filename_models.py](../screenshot_lib/filename_models.py):
   filename model configuration and dispatch.
 - [screenshot_lib/apple_models.py](../screenshot_lib/apple_models.py): official
