@@ -33,7 +33,7 @@ authority for model identities and machine-readable requirements.
    limit, neutral descriptors for people, and an extension-free model result.
 6. **Actions** - The script renames the file and writes EXIF metadata so the new
    caption + OCR text stay embedded in the image, while the CLI reports per-image
-   durations and adjusts the ETA for the remaining queue.
+   durations and adjusts the ETA for the remaining screenshots.
 
 ## Prompt Design
 

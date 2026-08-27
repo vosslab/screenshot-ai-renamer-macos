@@ -24,6 +24,12 @@ Process another directory:
 source source_me.sh && python screenshot-renamer.py --directory /path/to/screenshots
 ```
 
+Process screenshots in random order:
+
+```bash
+source source_me.sh && python screenshot-renamer.py --shuffle
+```
+
 ## Filename models
 
 Ollama with `qwen3.5:27b` is the default filename model. Thinking is always
@@ -68,6 +74,7 @@ continues with OCR plus ViT-GPT2 through PyTorch MPS.
 | --- | --- |
 | `-d`, `--directory <path>` | Screenshot directory; defaults to `~/Desktop` |
 | `-n`, `--dry-run` | Preview renames and tiny-image deletion without modifying files |
+| `-S`, `--shuffle` | Process screenshots in random order |
 | `-t`, `--unit-test` | Verify the configured filename model with a math prompt |
 | `--caption-prompt` | Supply a custom Moondream caption question |
 | `--no-color` | Disable ANSI color output |

@@ -412,6 +412,8 @@ def parse_args() -> argparse.Namespace:
 					help="Directory containing images (default: ~/Desktop)")
 	parser.add_argument("-n", "--dry-run", dest="dry_run", action="store_true",
 						help="Perform a dry run without modifying files.")
+	parser.add_argument("-S", "--shuffle", dest="shuffle", action="store_true",
+						help="Process screenshots in random order.")
 	parser.add_argument("-t", "--unit-test", dest="unit_test", action="store_true",
 						help="Run a unit test (ask LLM to add two numbers).")
 	parser.add_argument("--no-color", dest="no_color", action="store_true",
@@ -441,7 +443,8 @@ def main() -> None:
 	if not image_files:
 		return
 	image_files.sort()
-	if args.dry_run is True:
+	shuffle_enabled = args.dry_run or args.shuffle
+	if shuffle_enabled:
 		random.shuffle(image_files)
 	else:
 		image_files.sort(key=len)
@@ -460,10 +463,11 @@ def main() -> None:
 		))
 
 	mode = "Dry run (no changes)" if args.dry_run else "Live rename"
+	processing_order = "Random order" if shuffle_enabled else "Default order"
 	summary = f"\nPlan summary: Found {total_files} screenshots in {args.directory}."
 	if already_renamed:
 		summary += f" Skipping {len(already_renamed)} already renamed files."
-	print(colorize(f"{summary} {mode}.", Ansi.BOLD))
+	print(colorize(f"{summary} {mode}. {processing_order}.", Ansi.BOLD))
 
 	import screenshot_lib.generate_caption as generate_caption
 

@@ -3,6 +3,8 @@
 ## 2026-08-27
 
 ### Behavior or Interface Changes
+- Add `-S` / `--shuffle` to process screenshots in random order and
+  report the active ordering in the plan summary.
 - Add `docs/MODELS.md` as the Mac-only authority for model identity, hardware,
   unified-memory, accelerator, cache, and native-runtime requirements.
 - Centralize machine-readable model identities and requirements in
