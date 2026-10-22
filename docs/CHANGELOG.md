@@ -1,5 +1,68 @@
 # Changelog
 
+## 2026-10-22
+
+### Additions and New Features
+- Add a small nightly runner and LaunchAgent installer for daily 22:30 local
+  updates and screenshot processing. Use the existing screenshot folder by
+  default; registration does not start an immediate run.
+- Encode newly processed screenshots as WebP quality 90 with source ICC, EXIF,
+  XMP, transparency, dimensions, and modification time preserved. Report actual
+  size savings and retain the original PNG until publication succeeds.
+
+### Behavior or Interface Changes
+- Give the schedule installer explicit check, run, dry-run, install-schedule,
+  and remove-schedule actions; require an action to avoid accidental installation.
+- Advance the filename model to Qwen 3.6 27B after semantic evaluation. Retain
+  Moondream 3.1 Photon and the independent ViT-GPT2 MPS captioner.
+- Return extension-free filename slugs; the output layer adds the date and
+  `.webp`. Preserve existing named PNGs and resolve destination collisions with
+  numbered suffixes without overwriting another screenshot.
+- Remove project-authored version caps. Upgrade runtime dependencies eagerly
+  and require only the minimum Kestrel bridge version needed for current Torch.
+- Limit nightly Homebrew upgrades to the project's declared formulas. Log update
+  failures and still attempt processing in a fresh interpreter using normal
+  caption fallback behavior. Keep Ollama pulls outside the caption installer.
+- Add an evaluation-only `--model` option for comparing installed Ollama models.
+
+### Fixes and Maintenance
+- Select the fully qualified `mps:0` device and native Photon decoder. Live
+  testing exposed a cache-device comparison failure followed by a CUDA-only
+  generated-decoder query; both are resolved with supported runtime options.
+- Write multiline OCR through ExifTool command arguments instead of its
+  line-based input protocol. Check write status and read back OCR and captions.
+- Restart the stale Ollama 0.40.4 service onto the installed 0.40.8 release
+  before final live filename validation.
+
+### Removals and Deprecations
+- Remove unused direct Accelerate and pyvips requirements and the unused vips
+  Homebrew formula. Leave shared installed software and unrelated model caches alone.
+
+### Developer Tests and Notes
+- Qwen 3.6 passes all six semantic cases on Ollama 0.40.8 in 91 seconds, including
+  neutral portraits, conflicting captions, and prompt-injection-themed OCR.
+- On the shared first case, Qwen 3.5 produces a comparable filename in 178
+  seconds versus 22 seconds for Qwen 3.6. Stop the remaining slow baseline run
+  after the next request continues for several minutes; do not claim a complete
+  six-case baseline comparison.
+- Pass 839 fast tests, including conversion, collision, and original-preservation
+  cases. Check real ExifTool roundtrips separately, including multiline Unicode,
+  existing EXIF/XMP, color profile, alpha, and modification time.
+- Validate Moondream 3.1 Photon Metal and ViT-GPT2 MPS with Torch 2.14.1,
+  Torchvision 0.29.1, Moondream SDK 2.6.1, and Kestrel bridge 0.1.2.
+- Three disposable screenshot samples shrink to 26.1%, 9.7%, and 8.1% of their
+  PNG sizes. Inspect side-by-side renders and open the WebPs in macOS Preview.
+- Verify launchd registration, screenshot-folder access, and a dry run under
+  the actual LaunchAgent environment. Check update-failure continuation separately.
+- Complete a real launchd pipeline run on a disposable screenshot: produce
+  `assessment_results_timing.webp` in 30 seconds with a 73.7% size reduction.
+  Moondream returns an empty caption on this UI screenshot; the existing quality
+  check omits it, and OCR plus ViT-GPT2 successfully drive the filename model.
+- The shared Python installation reports unrelated Gradio Client/Hugging Face
+  Hub and Torchaudio/Torch dependency conflicts, plus missing Librosa/rembg
+  extras. These packages are outside this project's runtime; no unrelated
+  packages are changed to resolve them.
+
 ## 2026-08-27
 
 ### Behavior or Interface Changes

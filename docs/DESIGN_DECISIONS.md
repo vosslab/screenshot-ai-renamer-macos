@@ -59,3 +59,32 @@ Ollama models.
 **Owner.** [install_models.py](../install_models.py).
 
 ## Generated artifacts
+
+### WebP publication
+
+**Decision.** Encode newly processed screenshots as WebP quality 90. Pillow copies
+source ICC/EXIF/XMP data; ExifTool writes generated OCR and captions once and
+verifies those fields. Publish exclusively before removing the PNG.
+
+**Why.** Smaller screenshots remain readable while failed conversion or naming
+collisions must not destroy the original or another screenshot.
+
+**Consequence.** Existing named PNGs remain unchanged. Collisions receive numbered
+suffixes; output failures retain the source. Visual fidelity is checked on samples,
+not by a permanent pixel-equivalence test for a lossy codec.
+
+**Owner.** [screenshot_lib/webp_output.py](../screenshot_lib/webp_output.py).
+
+### Nightly updates and processing
+
+**Decision.** A user LaunchAgent starts the updater/processor daily at 22:30.
+Updates target declared runtime dependencies and configured models. Failed
+updates are logged, then the normal processing pipeline runs in a fresh process.
+
+**Why.** The owner wants current software and nightly processing. A failed
+download does not establish that the installed processing environment is broken.
+
+**Consequence.** No separate health-check framework, automatic downgrades, or
+sleep/wake management. Normal startup and per-image errors determine usability.
+
+**Owner.** [run_nightly.py](../run_nightly.py) and [install_launchd.py](../install_launchd.py).

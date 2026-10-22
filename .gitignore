@@ -4,6 +4,7 @@
 # Byte-compiled / optimized / DLL files
 .DS_Store
 *.png
+*.webp
 
 *.py[cod]
 *$py.class

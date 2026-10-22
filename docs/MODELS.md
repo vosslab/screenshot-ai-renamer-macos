@@ -30,13 +30,13 @@ the selected model is Moondream 3.1.
 | OCR | Tesseract | CPU | Extract all visible text for downstream evidence |
 | Primary caption | Moondream 3.1 `moondream3.1-9B-A2B` | Photon Metal | Rich visual description and visual questions |
 | MPS caption | `nlpconnect/vit-gpt2-image-captioning` | PyTorch MPS | Independent visual evidence when Photon is unavailable |
-| Default filename | Ollama `qwen3.5:27b` | Ollama on macOS | Condense OCR and captions into the final filename |
+| Default filename | Ollama `qwen3.6:27b` | Ollama on macOS | Condense OCR and captions into the final filename |
 | Optional filename | Apple Foundation Models | macOS system model | System-managed alternative to Ollama |
 
-Most entries in `pip_requirements.txt` remain unpinned. Torch uses
-`>=2.12,<2.13`, and Torchvision uses `>=0.27,<0.28`, because Photon's current
-native Mac bridge supports the Torch 2.12 ABI and PyTorch pairs that release
-with Torchvision 0.27. Patch releases remain free to upgrade within both ranges.
+Dependencies track current stable releases with no project-authored exact pins
+or upper bounds. The bridge requires `kestrel-mps-torch-ext>=0.1.2`; this release
+includes the Torch 2.14 native library. Eager upgrades also refresh compatible
+transitive dependencies.
 
 ## Mac compatibility
 
@@ -47,7 +47,7 @@ least 24 GB of unified memory before attempting Moondream 3.1.
 | Mac | Moondream 3.1 Photon | Complete default pipeline |
 | --- | --- | --- |
 | Less than 24 GB unified memory | Skipped | Use OCR plus ViT-GPT2 MPS and consider a smaller filename model |
-| 32 GB M1 MacBook Pro | Eligible; validate the current Photon build | Moondream 3.1 and `qwen3.5:27b` may compete for unified memory |
+| 32 GB M1 MacBook Pro | Eligible; validate the current Photon build | Moondream 3.1 and `qwen3.6:27b` may compete for unified memory |
 | 36 GB Mac Studio | Eligible | Expected to fit, but close other GPU-heavy applications and watch swapping |
 | 64 GB Mac | Preferred configuration | Best headroom for Photon and the default Ollama model together |
 
@@ -70,20 +70,21 @@ use CUDA or PyTorch MPS for model execution, but Photon's current Mac stack
 includes a PyTorch-minor-specific Kestrel MPS bridge. That native bridge must
 provide a matching library for the installed PyTorch minor.
 
-The live environment checked on 2026-08-27 had PyTorch 2.13.0 and
-`kestrel-mps-torch-ext` 0.1.1. That bridge wheel contained libraries for PyTorch
-2.9, 2.10, 2.11, and 2.12, but not 2.13. This is a native wheel availability
-problem, not a Moondream 3.1 model limitation.
+The adapter explicitly selects `device="mps:0"` because Kestrel compares its
+cache tensors against the fully qualified device. It selects `decode_path="native"`
+because the current generated decoder assumes CUDA hardware. These are supported
+Photon runtime options; third-party package code is not patched.
 
-With the bounded dependency pair, pip selected Torch 2.12.1 and Torchvision
-0.27.1 on the same Mac. Moondream 3.1 then passed a real Photon Metal caption,
-and ViT-GPT2 passed a real PyTorch MPS caption.
+Run real inference after dependency updates. A matching bridge alone does not
+prove that the runtime works. Fix concrete compatibility problems rather than
+adding version caps or downgrading packages. Failed captioners are reported and
+omitted while OCR and remaining visual evidence continue through the pipeline.
 
-The repository constrains only the native Torch and Torchvision minor-version
-pair. It permits every compatible 2.12 and 0.27 patch release while preventing
-pip from upgrading to a Torch minor that the installed Kestrel bridge cannot
-load. When a newer bridge adds support for a later Torch minor, these two upper
-bounds can advance together.
+On 2026-10-22 both captioners passed generated-image inference with Torch 2.14.1,
+Torchvision 0.29.1, SDK 2.6.1, and bridge 0.1.2. A real assessment-settings
+screenshot produced an empty Moondream caption; the normal quality check omitted
+it and the complete launchd pipeline succeeded using OCR and ViT-GPT2. Runtime
+compatibility does not guarantee a usable caption on every image.
 
 ### PyTorch MPS
 
@@ -109,12 +110,17 @@ compute unit the operating system uses.
 
 ### Ollama
 
-Ollama with `qwen3.5:27b` is the default. Its model files are intentionally not
+Ollama with `qwen3.6:27b` is the default. Its model files are intentionally not
 installed by `install_models.py`:
 
 ```bash
-ollama pull qwen3.5:27b
+ollama pull qwen3.6:27b
 ```
+
+The 2026-10-22 evaluation passes all six semantic cases with Qwen 3.6 on
+Ollama 0.40.8 in 91 seconds. The shared first case produces comparable filenames
+with Qwen 3.5 and 3.6, taking 178 and 22 seconds respectively. The remaining
+slow baseline run was stopped; these are not six-case comparative timings.
 
 Ollama must be running during screenshot processing. A smaller installed model
 can be selected in `screenshot_lib/model_catalog.py`, but it should pass
@@ -171,8 +177,7 @@ Mac and installed packages, so they are not permanent pytest cases.
   runtime without owning model selection.
 - `screenshot_lib/generate_caption.py` owns caption dispatch.
 - `screenshot_lib/filename_models.py` owns filename-provider dispatch.
-- `pip_requirements.txt` owns Python dependencies and the bounded native
-  Torch/Torchvision compatibility pair.
+- `pip_requirements.txt` owns runtime dependencies and demonstrated minimum versions.
 
 See the [official Photon local-inference guide](https://docs.moondream.ai/running-locally/)
 and the [Moondream 3.1 model card](https://huggingface.co/moondream/moondream3.1-9B-A2B)

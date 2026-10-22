@@ -5,7 +5,7 @@
 - [AGENTS.md](../AGENTS.md): agent pipeline overview, repo-specific workflow
   rules, and Python execution constraints.
 - [Brewfile](../Brewfile): Homebrew system dependencies: Ollama, ExifTool,
-  Tesseract, and libvips.
+  and Tesseract.
 - [CLAUDE.md](../CLAUDE.md): Claude-specific instructions for environments that
   use that file.
 - [LICENSE.GPL-3.0](../LICENSE.GPL-3.0): project license.
@@ -20,6 +20,8 @@
 - [pip_requirements-dev.txt](../pip_requirements-dev.txt): developer and test
   dependencies.
 - [screenshot-renamer.py](../screenshot-renamer.py): main CLI entry point.
+- [run_nightly.py](../run_nightly.py): updates runtime dependencies and runs the pipeline.
+- [install_launchd.py](../install_launchd.py): manages the daily 22:30 user LaunchAgent.
 - [source_me.sh](../source_me.sh): shell bootstrap that sets up the Python
   environment for repo-local commands.
 - [REPO_TYPE](../REPO_TYPE): project type marker used by style propagation.
@@ -61,6 +63,8 @@
   element extraction from model responses that may contain surrounding prose.
 - [screenshot_lib/update_metadata.py](../screenshot_lib/update_metadata.py): ExifTool metadata
   writer.
+- [screenshot_lib/webp_output.py](../screenshot_lib/webp_output.py): conversion and
+  publication that preserves the original PNG until success.
 
 ### [tools/](../tools/)
 
@@ -125,7 +129,7 @@
 
 ## Generated artifacts
 
-- Screenshot image files (`*.png`) are ignored by [.gitignore](../.gitignore).
+- Screenshot image files (`*.png`, `*.webp`) are ignored by [.gitignore](../.gitignore).
 - Python bytecode and cache folders such as `__pycache__/`, `.pytest_cache/`,
   `.mypy_cache/`, and `.ruff_cache/` are ignored.
 - Build and packaging outputs such as `build/`, `dist/`, `*.egg-info/`, and

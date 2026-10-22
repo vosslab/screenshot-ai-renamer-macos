@@ -14,7 +14,7 @@ import screenshot_lib.filename_models
 
 
 RENAMED_PATTERN = re.compile(
-	r"^screenshot_(\d{4}-\d{2}-\d{2}|unknown-date)-[a-z0-9_-]+\.png$",
+	r"^screenshot_(\d{4}-\d{2}-\d{2}|unknown-date)-[a-z0-9_-]+\.(?:png|webp)$",
 	re.IGNORECASE,
 )
 
@@ -193,7 +193,7 @@ def process_image(
 	import screenshot_lib.extract_text
 	import screenshot_lib.generate_caption
 	import screenshot_lib.intelligent_filename
-	import screenshot_lib.update_metadata
+	import screenshot_lib.webp_output
 
 	filename = os.path.basename(image_path)
 	print('\n')
@@ -325,7 +325,7 @@ def process_image(
 	date_part = match.group(1) if match else "unknown-date"
 
 	# Construct the final filename with correct date prefix
-	new_filename = f"screenshot_{date_part}-{filename_stub}"
+	new_filename = f"screenshot_{date_part}-{filename_stub}.webp"
 	new_path = os.path.join(os.path.dirname(image_path), new_filename)
 
 	if not os.path.exists(image_path):
@@ -334,40 +334,35 @@ def process_image(
 
 	if dry_run:
 		print(colorize(
-			"Dry Run: Would rename\n" + format_rename_pair(filename, new_filename),
+			"Dry Run: Would convert to WebP quality 90 and replace PNG\n"
+			+ format_rename_pair(filename, new_filename),
 			Ansi.YELLOW,
 		))
 	else:
 		start_time = time.time()
 		try:
-			os.rename(image_path, new_path)
-		except FileNotFoundError:
-			print(colorize(
-				f"Skipping missing file before rename: {filename}",
-				Ansi.YELLOW,
-			))
-			return False
-		try:
-			screenshot_lib.update_metadata.write_exif_metadata(
-				new_path,
-				ocr_text,
-				caption_payload,
+			original_bytes = os.path.getsize(image_path)
+			new_path = screenshot_lib.webp_output.publish_webp(
+				image_path, new_path, ocr_text, caption_payload,
 			)
-		except FileNotFoundError:
+		except Exception as exc:  # Encoder and ExifTool errors leave the source intact.
 			print(colorize(
-				f"Metadata update skipped; file disappeared: {os.path.basename(new_path)}",
+				f"WebP output failed for {filename}: {exc}",
 				Ansi.YELLOW,
 			))
 			return False
 		metadata_time = time.time() - start_time
 		print(colorize(
-			"Renamed and updated metadata:\n" + format_rename_pair(filename, new_filename),
+			"Converted and updated metadata:\n" + format_rename_pair(filename, new_path),
 			Ansi.GREEN,
 		))
 		print(colorize(
-			f"Time taken for renaming and metadata update: {metadata_time:.2f} seconds",
+			f"Time taken for conversion and metadata update: {metadata_time:.2f} seconds",
 			Ansi.GREEN,
 		))
+		output_bytes = os.path.getsize(new_path)
+		saved = 100 * (1 - output_bytes / original_bytes)
+		print(f"Size: {original_bytes:,} -> {output_bytes:,} bytes ({saved:.1f}% saved)")
 	return True
 
 #============================================
@@ -387,10 +382,12 @@ def process_directory(directory: str) -> tuple[list[str], list[str]]:
 			continue
 		extension = os.path.splitext(lower_filename)[-1]
 		#if not extension in (".png", ".jpg", ".jpeg"):
-		if extension != ".png":
-			continue
 		if RENAMED_PATTERN.match(lower_filename):
 			already_renamed.append(filename)
+			continue
+		if extension != ".png":
+			continue
+		if not os.path.isfile(os.path.join(directory, filename)):
 			continue
 		image_files.append(filename)
 
@@ -462,7 +459,7 @@ def main() -> None:
 			Ansi.YELLOW,
 		))
 
-	mode = "Dry run (no changes)" if args.dry_run else "Live rename"
+	mode = "Dry run (no changes)" if args.dry_run else "Live WebP conversion"
 	processing_order = "Random order" if shuffle_enabled else "Default order"
 	summary = f"\nPlan summary: Found {total_files} screenshots in {args.directory}."
 	if already_renamed:
@@ -551,7 +548,7 @@ def main() -> None:
 			Ansi.GREEN,
 		))
 	if skipped:
-		print(colorize(f"Skipped {skipped} images (missing/disappeared).", Ansi.YELLOW))
+		print(colorize(f"Skipped {skipped} images (ineligible, missing, or failed).", Ansi.YELLOW))
 
 	generate_caption.close_ai_components(ai_components)
 	generate_caption.close_ai_components(secondary_ai_components)

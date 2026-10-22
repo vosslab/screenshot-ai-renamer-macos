@@ -1,6 +1,6 @@
 # macOS AI screenshot renamer
 
-A local Python CLI for Mac users who want screenshots renamed from OCR, visual captions, and a configurable on-device filename LLM through Ollama or Apple's official Foundation Models SDK.
+A local Python CLI that turns Mac screenshots into named WebP files using OCR, visual captions, and an on-device filename model. Includes nightly updates and processing through launchd.
 
 ## Requirements
 

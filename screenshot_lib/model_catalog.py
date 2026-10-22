@@ -63,8 +63,8 @@ VIT_GPT2_MODEL = ModelIdentity(
 )
 
 QWEN_FILENAME_MODEL = ModelIdentity(
-	display_name="Qwen 3.5 27B",
-	model_id="qwen3.5:27b",
+	display_name="Qwen 3.6 27B",
+	model_id="qwen3.6:27b",
 )
 
 

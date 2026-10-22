@@ -19,7 +19,9 @@ def setup_captioner(prompt: str | None = None) -> dict:
 			f"Moondream 3.1 Photon requires at least 24 GB of unified memory; "
 			f"this Mac reports {available_gib:.0f} GB."
 		)
-	model = moondream.photon(model_spec.model.model_id)
+	# Kestrel compares cache tensor devices exactly; MPS tensors report mps:0.
+	# The generated decoder currently assumes CUDA; use Photon's native Metal decoder.
+	model = moondream.photon(model_spec.model.model_id, device="mps:0", decode_path="native")
 	components = {
 		"backend": model_spec.backend_id,
 		"display_name": model_spec.display_name,

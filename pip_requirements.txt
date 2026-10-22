@@ -1,14 +1,13 @@
-accelerate
 apple-fm-sdk
 huggingface-hub
+kestrel-mps-torch-ext>=0.1.2
 lxml
 moondream
 ollama
 pillow
 pyexiftool
 pytesseract
-pyvips
 rich
-torch>=2.12,<2.13
-torchvision>=0.27,<0.28
+torch
+torchvision
 transformers

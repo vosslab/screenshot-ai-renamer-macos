@@ -19,8 +19,9 @@ sys.path.insert(0, REPO_ROOT)
 # local repo modules
 import screenshot_lib.filename_models
 import screenshot_lib.intelligent_filename
+import screenshot_lib.model_catalog
 
-FILENAME_PATTERN = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*\.png$")
+FILENAME_PATTERN = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
 CASES = (
 	{
 		"name": "pytest_failure",
@@ -120,7 +121,7 @@ def evaluate_case(
 		filename_backend=backend,
 	)
 	elapsed = time.time() - start_time
-	slug = filename.removesuffix(".png")
+	slug = filename
 	slug_terms = set(slug.split("_"))
 	failures = []
 	if FILENAME_PATTERN.fullmatch(filename) is None:
@@ -147,6 +148,8 @@ def parse_args() -> argparse.Namespace:
 		dest="case_name",
 		help="Run one named evaluation case.",
 	)
+	parser.add_argument('-m', '--model', dest='model',
+		help='Ollama model identity for comparison; does not change the default.')
 	args = parser.parse_args()
 	return args
 
@@ -155,6 +158,10 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
 	"""Run the selected filename evaluation cases."""
 	args = parse_args()
+	if args.model:
+		screenshot_lib.model_catalog.QWEN_FILENAME_MODEL = screenshot_lib.model_catalog.ModelIdentity(
+			display_name=args.model, model_id=args.model,
+		)
 	cases = select_cases(list(CASES), args.case_name)
 	description = screenshot_lib.filename_models.describe_filename_model(
 		args.filename_backend,

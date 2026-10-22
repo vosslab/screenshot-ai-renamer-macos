@@ -78,7 +78,7 @@ def print_setup_summary() -> None:
 	import rich.panel
 
 	summary = "This command will:\n"
-	summary += "1. Upgrade Python packages within declared compatibility ranges.\n"
+	summary += "1. Upgrade Python packages to current releases.\n"
 	summary += "2. Verify native Metal and PyTorch MPS acceleration.\n"
 	summary += "3. Download and validate Moondream 3.1 through Photon.\n"
 	summary += "4. Cache and validate the ViT-GPT2 MPS captioner.\n"
@@ -163,6 +163,7 @@ def install_dependencies() -> None:
 		"pip",
 		"install",
 		"--upgrade",
+		"--upgrade-strategy", "eager",
 		"-r",
 		"pip_requirements.txt",
 	]
@@ -333,7 +334,7 @@ def main() -> None:
 	print_setup_summary()
 	print_section("1. PYTHON DEPENDENCIES")
 	if not args.skip_pip:
-		message = "Upgrading dependencies; Torch stays on the Photon-compatible 2.12 minor."
+		message = "Upgrading runtime dependencies and their dependencies to current releases."
 		print_status("INFO", message, "bold cyan")
 		install_dependencies()
 	else:

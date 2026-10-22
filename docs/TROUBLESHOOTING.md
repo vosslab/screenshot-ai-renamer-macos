@@ -91,10 +91,13 @@ runaway, or repetitive output is rejected rather than forwarded to the filename
 model.
 
 If Photon reports that `kestrel-mps-torch-ext` does not support the installed
-PyTorch minor, the installed environment predates the current dependency
-constraints or contains packages installed outside this project. Run
-`install_models.py` without `--skip-pip`. It selects a Torch 2.12 patch and the
-paired Torchvision 0.27 patch before validating Photon again.
+PyTorch minor, upgrade the runtime with `install_models.py` without `--skip-pip`.
+The latest bridge is installed alongside Torch and Torchvision, then tested with
+real inference. Requirements use no upper bounds or exact pins.
+
+The adapter selects the fully qualified `mps:0` device and native decoder.
+These avoid the observed cache-device comparison error and the generated
+decoder's CUDA-only device query on Apple Silicon.
 
 Moondream2 is not used as a fallback. Live validation produced a 2,706-character
 repeated-token collapse, so the pre-production backend and its Transformers shim

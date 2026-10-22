@@ -6,8 +6,8 @@ This repository is a local macOS CLI pipeline for renaming screenshots. The
 entry point, [screenshot-renamer.py](../screenshot-renamer.py), scans a target
 folder for macOS screenshot PNG files, extracts OCR text, generates visual
 captions, asks a configurable local filename LLM for a concise filename, and
-optionally renames the image while embedding metadata. Ollama with
-`qwen3.5:27b` is the default with thinking enabled. Apple's official
+optionally converts it to named WebP quality 90 while embedding metadata. Ollama with
+`qwen3.6:27b` is the default with thinking enabled. Apple's official
 Foundation Models SDK is available behind the same provider boundary.
 
 Reusable runtime modules live in [screenshot_lib/](../screenshot_lib/).
@@ -34,7 +34,7 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
   Mac runtime requirements and adapter implementations.
 - [screenshot_lib/intelligent_filename.py](../screenshot_lib/intelligent_filename.py):
   builds the established filename prompt, extracts the preferred XML result,
-  and returns a sanitized PNG filename.
+  and returns an extension-free snake_case slug.
 - [screenshot_lib/filename_models.py](../screenshot_lib/filename_models.py): owns
   filename-provider selection, request behavior, and dispatch.
 - [screenshot_lib/apple_models.py](../screenshot_lib/apple_models.py): checks
@@ -43,7 +43,13 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
 - [screenshot_lib/ollama_models.py](../screenshot_lib/ollama_models.py): sends
   separated system and user messages to the selected local Ollama model.
 - [screenshot_lib/update_metadata.py](../screenshot_lib/update_metadata.py): writes OCR text and
-  caption metadata into the renamed image through ExifTool.
+  caption metadata through ExifTool and verifies readback. Multiline values use
+  command arguments rather than ExifTool's line-based input protocol.
+- [screenshot_lib/webp_output.py](../screenshot_lib/webp_output.py): Pillow encoding,
+  source-metadata preservation, collision-safe publication, and PNG removal after success.
+- [run_nightly.py](../run_nightly.py): scoped updates followed by processing in a
+  fresh interpreter. Update failures do not block the processing attempt.
+- [install_launchd.py](../install_launchd.py): installs/removes the daily 22:30 user job.
 - [screenshot_lib/common_func.py](../screenshot_lib/common_func.py): validates
   Apple Silicon, MPS, and physical memory, plus shared image helpers.
 
@@ -51,7 +57,7 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
 
 1. [screenshot-renamer.py](../screenshot-renamer.py) scans the selected
    directory for pending `Screen*.png` files and skips already-renamed files that
-   match `screenshot_YYYY-MM-DD-<slug>.png`.
+   match `screenshot_YYYY-MM-DD-<slug>.png` or the corresponding `.webp` name.
 2. [screenshot_lib/extract_text.py](../screenshot_lib/extract_text.py) runs OCR and returns the
    extracted screen text.
 3. [screenshot_lib/generate_caption.py](../screenshot_lib/generate_caption.py)
@@ -69,9 +75,10 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
    `<filename>` XML element when present, while the response sanitizer also
    handles usable bare-text replies.
 6. [screenshot-renamer.py](../screenshot-renamer.py) combines the original
-   screenshot date with the generated slug. In dry-run mode it prints the rename;
-   in live mode it renames the file and calls
-   [screenshot_lib/update_metadata.py](../screenshot_lib/update_metadata.py).
+   screenshot date with the generated slug and `.webp`. Dry-run mode prints the
+   proposed conversion. Live mode encodes a temporary WebP, writes metadata,
+   verifies decoding, and publishes using an exclusive hard link. Collisions
+   receive numbered suffixes. Only successful publication permits source removal.
 
 ## Testing and verification
 
@@ -119,6 +126,6 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
 
 ## Known gaps
 
-- Measure the full Moondream 3.1 plus Ollama `qwen3.5:27b` memory and latency
+- Measure the full Moondream 3.1 plus Ollama `qwen3.6:27b` memory and latency
   profile on 32 GB and 36 GB Macs. Each model fits independently, but the full
   pipeline may create unified-memory pressure.

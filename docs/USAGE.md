@@ -2,7 +2,17 @@
 
 The screenshot renamer scans a directory for macOS `Screen*.png` captures,
 extracts OCR text, generates local visual captions, asks the configured local text
-model for a filename, and optionally renames the image and embeds metadata.
+model for a filename, and replaces each processed PNG with a named WebP at
+quality 90 containing OCR and caption metadata.
+
+WebP encoding keeps full dimensions, transparency, available ICC/EXIF/XMP data,
+and the source modification time. Generated OCR and captions replace their
+corresponding EXIF fields. The original PNG is removed only after decoding and
+metadata readback succeed and the output is published without overwriting an
+existing file. Collisions receive `_2`, `_3`, and subsequent suffixes.
+
+Quality 90 is lossy; savings depend on the screenshot. The CLI reports actual
+input/output sizes. Previously named PNGs and WebPs are skipped.
 
 ## Basic commands
 
@@ -32,7 +42,7 @@ source source_me.sh && python screenshot-renamer.py --shuffle
 
 ## Filename models
 
-Ollama with `qwen3.5:27b` is the default filename model. Thinking is always
+Ollama with `qwen3.6:27b` is the default filename model. Thinking is always
 enabled for Ollama. Apple's official Foundation Models SDK is also available as
 a selectable provider. Ollama may reason verbosely, then places the selected slug
 inside a `<filename>` XML element. Both provider adapters return complete
@@ -105,3 +115,43 @@ source source_me.sh && python tests/e2e/e2e_filename_prompt_eval.py \
 The evaluator checks filename format, expected and forbidden semantic concepts,
 an injection-themed regression case, and per-case latency. It runs outside
 pytest because it loads a real local model and may take several minutes.
+
+Compare another installed Ollama model without changing the catalog:
+
+```bash
+source source_me.sh && python tests/e2e/e2e_filename_prompt_eval.py --model qwen3.5:27b
+```
+
+## Nightly processing
+
+The LaunchAgent starts at 22:30 local time every day. It refreshes Homebrew's
+index, upgrades only formulas listed in [Brewfile](../Brewfile), and restarts
+Ollama only when its installation changes. It eagerly upgrades the runtime
+requirements, validates caption models, refreshes the configured Ollama weights,
+then processes the screenshot folder in random order. Required transitive
+dependencies may also update; unrelated packages and developer tools are not
+upgrade targets.
+
+Update failures are logged and do not prevent later stages. Processing starts
+in a fresh interpreter and checks actual usability through the normal pipeline.
+Unavailable captioners are omitted; failures that prevent processing are logged.
+There is no automatic downgrade or version cap.
+
+Run the same workflow manually, or preview filenames without updates or image changes:
+
+```bash
+source source_me.sh && python install_launchd.py --check
+source source_me.sh && python install_launchd.py --run
+source source_me.sh && python install_launchd.py --dry-run
+```
+
+Logs are `~/Library/Logs/screenshot-renamer.log` and
+`~/Library/Logs/screenshot-renamer.error.log`. Inspect the job with:
+
+```bash
+launchctl print gui/$(id -u)/local.vosslab.screenshot-renamer
+```
+
+Documents-folder access must be available to the scheduled Python process. If
+macOS denies access, enable it in Privacy & Security settings and retry. Sleep
+and wake settings are not managed by this project.

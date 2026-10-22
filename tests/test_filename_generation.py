@@ -12,7 +12,7 @@ def test_filename_response_normalizes_separators() -> None:
 	result = screenshot_lib.intelligent_filename._sanitize_filename_response(
 		"Quarterly Results Review.png"
 	)
-	assert result == "quarterly_results_review.png"
+	assert result == "quarterly_results_review"
 
 
 #============================================
@@ -44,7 +44,7 @@ def test_missing_xml_falls_back_to_existing_response_handling(
 		fake_run_filename_model,
 	)
 	filename = screenshot_lib.intelligent_filename.generate_intelligent_filename("OCR", "caption")
-	assert filename == "project_notes.png"
+	assert filename == "project_notes"
 
 
 #============================================
@@ -69,4 +69,4 @@ def test_filename_generation_extracts_xml_from_surrounding_prose(
 		"OCR",
 		"caption",
 	)
-	assert filename == "project_notes.png"
+	assert filename == "project_notes"

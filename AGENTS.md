@@ -28,12 +28,16 @@ authority for model identities and machine-readable requirements.
    LLM how to weigh Moondream vs. ViT-GPT2 if both are present.
 5. **Filename Agent** - `screenshot_lib/intelligent_filename.py` sends the
    aggregated context through `screenshot_lib/filename_models.py`. Ollama with
-   `qwen3.5:27b` is the default; Apple's official `apple-fm-sdk` is a selectable
+   `qwen3.6:27b` is the default; Apple's official `apple-fm-sdk` is a selectable
    provider. The existing filename policy enforces snake_case, a 64-character
    limit, neutral descriptors for people, and an extension-free model result.
-6. **Actions** - The script renames the file and writes EXIF metadata so the new
-   caption + OCR text stay embedded in the image, while the CLI reports per-image
-   durations and adjusts the ETA for the remaining screenshots.
+6. **Actions** - `screenshot_lib/webp_output.py` encodes WebP quality 90, preserves
+   source metadata, and uses ExifTool to write and read back OCR + captions. It
+   publishes without overwriting existing files, then removes the PNG. The CLI
+   reports size savings, per-image durations, and ETA.
+7. **Nightly job** - `install_launchd.py` registers `run_nightly.py` at 22:30
+   local time. It updates this project's runtime dependencies and configured
+   model weights before processing. Update failures do not block a usable pipeline.
 
 ## Prompt Design
 
@@ -57,6 +61,7 @@ authority for model identities and machine-readable requirements.
 - `QWEN_FILENAME_MODEL` selects the installed Ollama model identity.
 - `FILENAME_MODEL_THINKING` remains enabled for filename generation.
 - Filename requests allow the model to determine its full response length.
+- Filename generation returns an extension-free slug; the output layer adds `.webp`.
 
 `screenshot_lib/ollama_models.py` sends stable policy as a system message and the
 task plus evidence as a user message. It disables streaming, keeps the thinking
@@ -87,6 +92,10 @@ reference for anyone debugging or tuning the agent stack.
 retired project-model repositories, including the removed Moondream2 backend.
 Keep the retired allowlist narrow; never purge unrelated Hugging Face models or
 Ollama models.
+
+Use latest stable dependencies without exact pins or upper bounds. The Photon
+adapter selects `mps:0` and the native decoder to avoid observed device-comparison
+and CUDA-only generated-decoder failures. Validate changes with real inference.
 
 ## Human guidance
 

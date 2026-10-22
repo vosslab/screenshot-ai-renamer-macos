@@ -1,4 +1,6 @@
-"""Build filename prompts and turn local-model responses into PNG filenames."""
+"""Build filename prompts and turn local-model responses into filename slugs."""
+
+import re
 
 # local repo modules
 import screenshot_lib.filename_models
@@ -23,17 +25,13 @@ def _context_text(text: str) -> str:
 
 #============================================
 def _sanitize_filename_response(response: str) -> str:
-	"""Convert a model response into a validated PNG filename."""
+	"""Convert a model response into an extension-free snake_case slug."""
 	first_line = response.split("\n")[0].lower()
-	filename = first_line.replace(" ", "_").replace("__", "_")
-	filename = "".join(c for c in filename if c.isalnum() or c in "._-")
-	filename = filename.strip("._-")
-	filename = filename[:64]
+	first_line = re.sub(r"(?:\.(?:png|webp))+$", "", first_line.strip())
+	filename = re.sub(r"[^a-z0-9]+", "_", first_line).strip("_")[:64].rstrip("_")
 
 	if not filename:
 		raise ValueError("Filename model returned an empty filename.")
-	if not filename.endswith(".png"):
-		filename += ".png"
 	return filename
 
 
@@ -62,7 +60,7 @@ def _build_filename_prompt(
 		"- Use specific purpose and category terms that help the user find and recognize the "
 		"screenshot later.",
 		"- Use lowercase letters, digits, and underscores. End the slug after its final word; the "
-		"application adds .png.",
+		"application adds the file extension.",
 		"- Choose the shorter, more general filename when the evidence is ambiguous.",
 	]
 	prompt.append(
@@ -98,7 +96,7 @@ def generate_intelligent_filename(
 		filename_backend: Optional provider override for evaluation.
 
 	Returns:
-		A sanitized filename ending in `.png`.
+		An extension-free, sanitized filename slug.
 	"""
 	full_prompt = _build_filename_prompt(ocr_text, caption_context, model_note)
 	response = screenshot_lib.filename_models.run_filename_model(
