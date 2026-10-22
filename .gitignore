@@ -1,8 +1,30 @@
-# === LOCAL REPOSITORY RULES === [ADD CUSTOM IGNORES HERE]
+# === UNIVERSAL === [PROPAGATED - LOCAL EDITS OVERWRITTEN]
+.DS_Store
+/node_modules/
+/.env
+/report_*.txt
+/output*/
+/generated/
+/graphify-out/
+_temp*.?*
+/temp/
+/tests/_temp/
+/OTHER_REPOS/
+/LOCAL_ONLY/
+
+# === PYTHON === [PROPAGATED - LOCAL EDITS OVERWRITTEN]
+build/
+dist/
+sdist/
+*.egg
+*.egg-info/
+site/
+
+# -------------------- LOCAL REPOSITORY RULES --------------------
+# ADD YOUR CUSTOM IGNORES BELOW
 # Propagation preserves this section.
 
 # Byte-compiled / optimized / DLL files
-.DS_Store
 *.png
 *.webp
 
@@ -12,22 +34,17 @@
 *.so
 # Distribution / packaging
 .Python
-build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
 lib/
 lib64/
 parts/
-sdist/
 var/
 wheels/
 share/python-wheels/
-*.egg-info/
 .installed.cfg
-*.egg
 MANIFEST
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -142,18 +159,3 @@ cython_debug/
 #.idea/
 # PyPI configuration file
 .pypirc
-
-# === UNIVERSAL === [PROPAGATED - LOCAL EDITS OVERWRITTEN]
-/node_modules/
-/.env
-/report_*.txt
-/output*/
-/generated/
-/graphify-out/
-_temp*.?*
-/temp/
-/OTHER_REPOS/
-/LOCAL_ONLY/
-
-# === PYTHON === [PROPAGATED - LOCAL EDITS OVERWRITTEN]
-site/

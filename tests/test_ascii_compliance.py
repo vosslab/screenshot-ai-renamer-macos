@@ -1,3 +1,5 @@
+# This file is vendored. Local changes can and will be overwritten by propagation.
+
 # Standard Library
 import os
 import re
@@ -22,7 +24,7 @@ PROGRESS_EVERY = 1
 HEADER = "ASCII compliance errors detected:"
 
 ASCII_EXTENSIONS = {
-	".md",
+	".md", ".djot",
 	".txt",
 	".py",
 	".js",
@@ -471,4 +473,3 @@ def test_ascii_compliance(path: str) -> None:
 	assert rel not in VIOLATIONS_BY_FILE, file_utils.format_violation_assert_message(
 		rel, VIOLATIONS_BY_FILE.get(rel, []), REPORT_NAME
 	)
-# Vendored pytest file. Local changes can and will be overwritten.

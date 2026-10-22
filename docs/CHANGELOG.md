@@ -63,6 +63,10 @@
   extras. These packages are outside this project's runtime; no unrelated
   packages are changed to resolve them.
 
+### Fixes and Maintenance
+
+- Synchronized shared style guides, tests, and repository support files from the starter template.
+
 ## 2026-08-27
 
 ### Behavior or Interface Changes
