@@ -42,7 +42,7 @@ source source_me.sh && python screenshot-renamer.py --shuffle
 
 ## Filename models
 
-Ollama with `qwen3.6:27b` is the default filename model. Thinking is always
+Ollama with the model in `~/bin/local-model.txt` is the default filename model. Thinking is always
 enabled for Ollama. Apple's official Foundation Models SDK is also available as
 a selectable provider. Ollama may reason verbosely, then places the selected slug
 inside a `<filename>` XML element. Both provider adapters return complete
@@ -51,9 +51,7 @@ response text to the shared XML extraction path.
 See `docs/MODELS.md` before changing a model or moving the pipeline to another
 Apple Silicon Mac.
 
-Model choices are intentionally not production CLI flags because they rarely
-change between runs. Customize the model identity in
-`screenshot_lib/model_catalog.py` and provider behavior in
+Set the filename model in `~/bin/local-model.txt`. Configure provider behavior in
 [`screenshot_lib/filename_models.py`](../screenshot_lib/filename_models.py):
 
 - `DEFAULT_FILENAME_BACKEND`: `ollama` or `apple`.
@@ -119,7 +117,7 @@ pytest because it loads a real local model and may take several minutes.
 Compare another installed Ollama model without changing the catalog:
 
 ```bash
-source source_me.sh && python tests/e2e/e2e_filename_prompt_eval.py --model qwen3.5:27b
+source source_me.sh && python tests/e2e/e2e_filename_prompt_eval.py
 ```
 
 ## Nightly processing

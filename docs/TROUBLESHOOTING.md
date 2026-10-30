@@ -7,7 +7,7 @@ accelerator availability, and native Python ABI failures.
 - Confirm Ollama is running with `ollama list`.
 - Launch the Ollama app or run `ollama serve` in another terminal.
 - Confirm the default model is installed with `ollama list`.
-- Download a missing default model with `ollama pull qwen3.5:27b`.
+- Download a missing default model with `ollama pull "$(cat ~/bin/local-model.txt)"`.
 
 ## Ollama model is too slow
 
@@ -51,10 +51,10 @@ model reports a context error, choose a model with a larger context window.
 ## Slow or hot GPU
 
 All generation runs on-device. Close other GPU-heavy apps. Moondream 3.1 fits on
-Apple Silicon with at least 24 GB, but running it alongside the default
-`qwen3.5:27b` filename model can create additional memory pressure on 32 GB and
+Apple Silicon with at least 24 GB, but running it alongside the filename model
+selected in `~/bin/local-model.txt` can create additional memory pressure on 32 GB and
 36 GB Macs. Close other GPU-heavy applications or select a smaller Ollama model
-in `screenshot_lib/model_catalog.py` if the complete pipeline swaps heavily.
+in `~/bin/local-model.txt` if the complete pipeline swaps heavily.
 
 ## Apple MPS is unavailable
 

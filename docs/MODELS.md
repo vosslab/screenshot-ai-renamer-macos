@@ -30,7 +30,7 @@ the selected model is Moondream 3.1.
 | OCR | Tesseract | CPU | Extract all visible text for downstream evidence |
 | Primary caption | Moondream 3.1 `moondream3.1-9B-A2B` | Photon Metal | Rich visual description and visual questions |
 | MPS caption | `nlpconnect/vit-gpt2-image-captioning` | PyTorch MPS | Independent visual evidence when Photon is unavailable |
-| Default filename | Ollama `qwen3.6:27b` | Ollama on macOS | Condense OCR and captions into the final filename |
+| Default filename | Model selected in `~/bin/local-model.txt` | Ollama on macOS | Condense OCR and captions into the final filename |
 | Optional filename | Apple Foundation Models | macOS system model | System-managed alternative to Ollama |
 
 Dependencies track current stable releases with no project-authored exact pins
@@ -47,7 +47,7 @@ least 24 GB of unified memory before attempting Moondream 3.1.
 | Mac | Moondream 3.1 Photon | Complete default pipeline |
 | --- | --- | --- |
 | Less than 24 GB unified memory | Skipped | Use OCR plus ViT-GPT2 MPS and consider a smaller filename model |
-| 32 GB M1 MacBook Pro | Eligible; validate the current Photon build | Moondream 3.1 and `qwen3.6:27b` may compete for unified memory |
+| 32 GB M1 MacBook Pro | Eligible; validate the current Photon build | Moondream 3.1 and the model in `~/bin/local-model.txt` may compete for unified memory |
 | 36 GB Mac Studio | Eligible | Expected to fit, but close other GPU-heavy applications and watch swapping |
 | 64 GB Mac | Preferred configuration | Best headroom for Photon and the default Ollama model together |
 
@@ -110,11 +110,11 @@ compute unit the operating system uses.
 
 ### Ollama
 
-Ollama with `qwen3.6:27b` is the default. Its model files are intentionally not
+Ollama with the model in `~/bin/local-model.txt` is the default. Its model files are intentionally not
 installed by `install_models.py`:
 
 ```bash
-ollama pull qwen3.6:27b
+ollama pull "$(cat ~/bin/local-model.txt)"
 ```
 
 The 2026-10-22 evaluation passes all six semantic cases with Qwen 3.6 on
@@ -123,7 +123,7 @@ with Qwen 3.5 and 3.6, taking 178 and 22 seconds respectively. The remaining
 slow baseline run was stopped; these are not six-case comparative timings.
 
 Ollama must be running during screenshot processing. A smaller installed model
-can be selected in `screenshot_lib/model_catalog.py`, but it should pass
+can be selected in `~/bin/local-model.txt`, but it should pass
 `tests/e2e/e2e_filename_prompt_eval.py` before becoming the default.
 
 ### Apple Foundation Models
@@ -171,8 +171,9 @@ Mac and installed packages, so they are not permanent pytest cases.
 
 ## Configuration ownership
 
-- `screenshot_lib/model_catalog.py` owns model identities and Mac runtime
-  requirements.
+- `~/bin/local-model.txt` selects the shared Ollama filename model.
+- `screenshot_lib/model_catalog.py` owns caption model identities and Mac runtime
+  requirements, and reads the shared filename preference.
 - `screenshot_lib/moondream_photon.py` adapts the Moondream SDK and Photon
   runtime without owning model selection.
 - `screenshot_lib/generate_caption.py` owns caption dispatch.

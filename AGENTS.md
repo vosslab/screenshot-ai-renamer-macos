@@ -6,8 +6,8 @@ filename. This document explains how they coordinate so you can adjust prompts o
 swap in new models confidently.
 
 `docs/MODELS.md` is the authority for Mac hardware, accelerator, memory, model,
-and native-runtime requirements. `screenshot_lib/model_catalog.py` is the code
-authority for model identities and machine-readable requirements.
+and native-runtime requirements. `screenshot_lib/model_catalog.py` owns caption model identities and machine-readable
+requirements; `~/bin/local-model.txt` selects the shared Ollama filename model.
 
 ## Flow Overview
 
@@ -28,7 +28,7 @@ authority for model identities and machine-readable requirements.
    LLM how to weigh Moondream vs. ViT-GPT2 if both are present.
 5. **Filename Agent** - `screenshot_lib/intelligent_filename.py` sends the
    aggregated context through `screenshot_lib/filename_models.py`. Ollama with
-   `qwen3.6:27b` is the default; Apple's official `apple-fm-sdk` is a selectable
+   the model in `~/bin/local-model.txt` is the default; Apple's official `apple-fm-sdk` is a selectable
    provider. The existing filename policy enforces snake_case, a 64-character
    limit, neutral descriptors for people, and an extension-free model result.
 6. **Actions** - `screenshot_lib/webp_output.py` encodes WebP quality 90, preserves
@@ -76,7 +76,7 @@ and returns unrestricted response text to the same XML extraction path.
 
 - **Add new captioners** as focused adapter modules under `screenshot_lib/`, then
   register their orchestration in `screenshot_lib/generate_caption.py`.
-- **Customize filename model identity** in `screenshot_lib/model_catalog.py`.
+- **Customize filename model identity** in `~/bin/local-model.txt`.
   Keep provider selection and request behavior in
   `screenshot_lib/filename_models.py`; reserve the production CLI for frequent
   per-run choices.

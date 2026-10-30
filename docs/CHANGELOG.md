@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-29
+
+### Behavior or Interface Changes
+- Read the filename model from `~/bin/local-model.txt`, shared with Maia and
+  local-llm-wrapper, so future model upgrades need one preference edit.
+
 ## 2026-10-22
 
 ### Additions and New Features

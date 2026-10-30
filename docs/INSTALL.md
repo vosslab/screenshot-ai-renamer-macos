@@ -52,10 +52,10 @@ Ollama models.
 
 ## Filename model setup
 
-The default filename model is `qwen3.6:27b` through Ollama. Download it once:
+The default filename model is the model in `~/bin/local-model.txt` through Ollama. Download it once:
 
 ```bash
-ollama pull qwen3.6:27b
+ollama pull "$(cat ~/bin/local-model.txt)"
 ```
 
 Ollama must be running while screenshots are processed. Launch the Ollama app
@@ -96,3 +96,11 @@ source source_me.sh && python install_launchd.py --remove-schedule
 ```
 
 See [USAGE.md](USAGE.md#nightly-processing) for update scope, logs, and manual runs.
+
+## Shared local model
+
+Create `~/bin/local-model.txt` with one installed Ollama model tag on its only line.
+This is the shared preference for Maia, this renamer, and local-llm-wrapper.
+Edit that file for future upgrades, pull the selected model, and run `~/bin/maia.py`
+to verify inference and synchronize Hermes. Restart long-running callers to reload
+the preference. Remove retired models after validation.

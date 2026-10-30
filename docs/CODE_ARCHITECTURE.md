@@ -7,7 +7,7 @@ entry point, [screenshot-renamer.py](../screenshot-renamer.py), scans a target
 folder for macOS screenshot PNG files, extracts OCR text, generates visual
 captions, asks a configurable local filename LLM for a concise filename, and
 optionally converts it to named WebP quality 90 while embedding metadata. Ollama with
-`qwen3.6:27b` is the default with thinking enabled. Apple's official
+the model in `~/bin/local-model.txt` is the default with thinking enabled. Apple's official
 Foundation Models SDK is available behind the same provider boundary.
 
 Reusable runtime modules live in [screenshot_lib/](../screenshot_lib/).
@@ -110,7 +110,8 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
   different model guidance.
 - Change filename rules in
   [screenshot_lib/intelligent_filename.py](../screenshot_lib/intelligent_filename.py).
-- Change model identities and requirements in `screenshot_lib/model_catalog.py`.
+- Change the Ollama filename model in `~/bin/local-model.txt`.
+- Change caption model identities and requirements in `screenshot_lib/model_catalog.py`.
 - Change filename-provider selection and dispatch in
   [screenshot_lib/filename_models.py](../screenshot_lib/filename_models.py).
 - Change Ollama request behavior in
@@ -126,6 +127,6 @@ developer automation lives in [tests/](../tests/) and [devel/](../devel/).
 
 ## Known gaps
 
-- Measure the full Moondream 3.1 plus Ollama `qwen3.6:27b` memory and latency
+- Measure the full Moondream 3.1 plus Ollama the model in `~/bin/local-model.txt` memory and latency
   profile on 32 GB and 36 GB Macs. Each model fits independently, but the full
   pipeline may create unified-memory pressure.

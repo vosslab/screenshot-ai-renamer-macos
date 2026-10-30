@@ -1,6 +1,7 @@
 """Model identities and Mac-specific runtime requirements."""
 
 import dataclasses
+import pathlib
 
 
 GIBIBYTE = 1024 ** 3
@@ -63,8 +64,8 @@ VIT_GPT2_MODEL = ModelIdentity(
 )
 
 QWEN_FILENAME_MODEL = ModelIdentity(
-	display_name="Qwen 3.6 27B",
-	model_id="qwen3.6:27b",
+	display_name="Preferred local model",
+	model_id=(pathlib.Path.home() / "bin/local-model.txt").read_text().strip(),
 )
 
 

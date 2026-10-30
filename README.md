@@ -12,10 +12,13 @@ A local Python CLI that turns Mac screenshots into named WebP files using OCR, v
 
 ## Quick start
 
+Set your preferred Ollama tag in `~/bin/local-model.txt` before setup; Maia and
+local-llm-wrapper share that file.
+
 ```bash
 brew bundle
 source source_me.sh && python install_models.py
-ollama pull qwen3.5:27b
+ollama pull "$(cat ~/bin/local-model.txt)"
 source source_me.sh && python screenshot-renamer.py -t
 source source_me.sh && python screenshot-renamer.py --dry-run
 ```
