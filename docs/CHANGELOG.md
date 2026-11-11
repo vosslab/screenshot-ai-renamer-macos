@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-11-11
+
+### Fixes and Maintenance
+- Synchronize Photon GPU-to-CPU token transfers before the scheduler consumes
+  them. Kestrel's no-op MPS completion event allowed stale IDs to cause empty,
+  truncated, or duplicated captions. Apply a narrow process-local transfer adapter
+  without modifying installed package files or compiling upstream code.
+- Use greedy Photon visual generation with up to 192 tokens. Stochastic
+  screenshot captions sometimes looped through the same log description until
+  the existing length or repetition quality checks rejected them.
+- Check the native Kestrel MPS bridge before Photon loads weights or starts
+  warmup, so an unsupported Torch version follows the existing caption fallback
+  without scheduler and warmup tracebacks.
+- Validate real Photon Metal and ViT-GPT2 MPS inference after installing the
+  published Torch 2.14.1 wheel; existing Torchvision 0.29.2 works with both.
+- After the transfer fix and greedy generation, pass five generated-image
+  captions, five captions of the reported log screenshot, and two custom visual
+  queries through the production adapter in one fresh process. Keep screenshots unchanged.
+
+### Decisions and Failures
+- Torch 2.15.0 exceeds the supported minors in the latest bridge wheel (0.1.2).
+  At the owner's request, temporarily constrain Torch to the latest 2.14 release
+  so setup and nightly upgrades preserve Photon compatibility. Remove the cap
+  when an upstream bridge wheel supports current Torch. Do not compile upstream code.
+
 ## 2026-10-29
 
 ### Behavior or Interface Changes

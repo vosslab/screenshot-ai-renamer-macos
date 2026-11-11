@@ -38,8 +38,10 @@ The installer runs a real caption request against a generated sanity-check image
 loading weights alone does not count as validation. Rich sections distinguish
 dependencies, Apple hardware, each model, cleanup, and completion. Dependencies
 and their dependencies upgrade eagerly to current stable releases. Requirements
-have no exact pins or upper bounds; the native bridge has a minimum version of
-0.1.2. Live inference establishes whether the installed runtime works.
+use a temporary `torch>=2.14,<2.15` constraint for the published native bridge,
+which requires at least version 0.1.2. Other dependencies remain unpinned.
+Remove the Torch cap when upstream publishes a bridge for current Torch.
+Live inference establishes whether the installed runtime works.
 
 Photon requires Apple Silicon, macOS 13+, and at least 24 GB of unified memory.
 The installer reports detected memory. Macs below 24 GB skip Moondream 3.1 and

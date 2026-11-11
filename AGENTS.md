@@ -93,9 +93,14 @@ retired project-model repositories, including the removed Moondream2 backend.
 Keep the retired allowlist narrow; never purge unrelated Hugging Face models or
 Ollama models.
 
-Use latest stable dependencies without exact pins or upper bounds. The Photon
+Use latest stable dependencies, except the owner's temporary Torch 2.14 constraint
+for the published Photon bridge. Remove that cap when the bridge supports current Torch. The Photon
+adapter checks the native Torch bridge before loading weights or starting warmup.
+An incompatible bridge follows the existing unavailable-captioner path. The Photon
 adapter selects `mps:0` and the native decoder to avoid observed device-comparison
 and CUDA-only generated-decoder failures. Validate changes with real inference.
+`screenshot_lib/photon_mps_transfer.py` adds a process-local MPS token-readback wait
+because Kestrel's non-CUDA completion event does not synchronize asynchronous copies.
 
 ## Human guidance
 

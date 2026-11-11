@@ -33,10 +33,19 @@ the selected model is Moondream 3.1.
 | Default filename | Model selected in `~/bin/local-model.txt` | Ollama on macOS | Condense OCR and captions into the final filename |
 | Optional filename | Apple Foundation Models | macOS system model | System-managed alternative to Ollama |
 
-Dependencies track current stable releases with no project-authored exact pins
-or upper bounds. The bridge requires `kestrel-mps-torch-ext>=0.1.2`; this release
+Dependencies track current stable releases except the owner's temporary
+`torch>=2.14,<2.15` compatibility constraint. The bridge requires
+`kestrel-mps-torch-ext>=0.1.2`; this release
 includes the Torch 2.14 native library. Eager upgrades also refresh compatible
 transitive dependencies.
+
+As of 2026-11-11, stable Torch is 2.15.0 but the latest published bridge wheel
+(0.1.2) supports only Torch 2.9 through 2.14. Moondream 3.1 is therefore
+unavailable with the current stable packages. Use the newest Torch 2.14 release
+until upstream publishes a matching bridge wheel, then remove the temporary cap
+in `pip_requirements.txt`. The adapter checks the bridge before
+loading Photon weights or starting warmup. Normal dependency upgrades will pick
+up a newer bridge when published; rerun the installer to validate real inference.
 
 ## Mac compatibility
 
@@ -73,12 +82,31 @@ provide a matching library for the installed PyTorch minor.
 The adapter explicitly selects `device="mps:0"` because Kestrel compares its
 cache tensors against the fully qualified device. It selects `decode_path="native"`
 because the current generated decoder assumes CUDA hardware. These are supported
-Photon runtime options; third-party package code is not patched.
+Photon runtime options. Installed third-party package files are not modified.
+
+The application also installs a process-local transfer-handle adapter from
+`screenshot_lib/photon_mps_transfer.py`. Kestrel 0.9.1 starts asynchronous token
+copies to CPU memory but uses a no-op completion event on MPS. Reading those
+buffers before the GPU finishes produces empty, truncated, or duplicated captions.
+The adapter waits for MPS completion before returning token IDs to the scheduler.
+It preserves the normal wait for real completion events. Remove this adapter when
+upstream provides MPS completion events; no upstream code is compiled locally.
+Caption and custom visual-query responses use greedy decoding and up to 192 generated tokens to
+keep visual evidence concise for the existing 1200-character quality limit.
+The filename model's response length remains unrestricted.
 
 Run real inference after dependency updates. A matching bridge alone does not
-prove that the runtime works. Fix concrete compatibility problems rather than
-adding version caps or downgrading packages. Failed captioners are reported and
+prove that the runtime works. Use the documented temporary Torch downgrade for
+the current bridge mismatch. Failed captioners are reported and
 omitted while OCR and remaining visual evidence continue through the pipeline.
+
+On 2026-11-11 both captioners passed generated-image inference on this 64 GB Mac
+with the published Torch 2.14.1 wheel, Torchvision 0.29.2, SDK 2.6.1, and bridge 0.1.2.
+After fixing token readback and selecting greedy generation, five test-card
+captions, five log-screenshot captions, and two visual queries passed through
+the production adapter in a fresh process. Test-card answers described both the
+red and blue shapes; screenshot captions described the terminal output. This
+checks execution and usable output, not perfect transcription of screenshot text.
 
 On 2026-10-22 both captioners passed generated-image inference with Torch 2.14.1,
 Torchvision 0.29.1, SDK 2.6.1, and bridge 0.1.2. A real assessment-settings
@@ -163,6 +191,8 @@ without an external model or current package state:
 - `tests/test_caption_quality.py` checks acceptance of normal captions and
   rejection of collapsed or runaway output.
 - `tests/test_common_func.py` checks the macOS runtime-version boundary.
+- `tests/test_photon_mps_transfer.py` checks that host token readback waits for
+  GPU completion without needing a real GPU or model.
 
 Live `install_models.py` inference, Metal/MPS access, current package imports,
 native bridge compatibility, model downloads, and cache-recovery measurements
@@ -176,6 +206,8 @@ Mac and installed packages, so they are not permanent pytest cases.
   requirements, and reads the shared filename preference.
 - `screenshot_lib/moondream_photon.py` adapts the Moondream SDK and Photon
   runtime without owning model selection.
+- `screenshot_lib/photon_mps_transfer.py` owns the temporary token-readback
+  synchronization adapter for the upstream MPS completion-event bug.
 - `screenshot_lib/generate_caption.py` owns caption dispatch.
 - `screenshot_lib/filename_models.py` owns filename-provider dispatch.
 - `pip_requirements.txt` owns runtime dependencies and demonstrated minimum versions.

@@ -1,5 +1,6 @@
 apple-fm-sdk
 huggingface-hub
+kestrel
 kestrel-mps-torch-ext>=0.1.2
 lxml
 moondream
@@ -8,6 +9,7 @@ pillow
 pyexiftool
 pytesseract
 rich
-torch
+# Temporary Photon bridge compatibility; remove the cap when its wheel supports Torch 2.15.
+torch>=2.14,<2.15
 torchvision
 transformers

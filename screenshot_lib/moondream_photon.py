@@ -1,7 +1,7 @@
 #============================================
 def setup_captioner(prompt: str | None = None) -> dict:
 	"""Load Moondream 3.1 through the official Photon Metal runtime."""
-	import moondream
+	import kestrel_mps_torch_ext
 
 	import screenshot_lib.common_func
 	import screenshot_lib.model_catalog
@@ -19,6 +19,13 @@ def setup_captioner(prompt: str | None = None) -> dict:
 			f"Moondream 3.1 Photon requires at least 24 GB of unified memory; "
 			f"this Mac reports {available_gib:.0f} GB."
 		)
+	# Reject unsupported Torch builds before Photon allocates weights or starts warmup.
+	kestrel_mps_torch_ext.load_torch_mps_bridge()
+	import moondream
+	import screenshot_lib.photon_mps_transfer
+
+	screenshot_lib.photon_mps_transfer.enable_mps_transfer_sync()
+
 	# Kestrel compares cache tensor devices exactly; MPS tensors report mps:0.
 	# The generated decoder currently assumes CUDA; use Photon's native Metal decoder.
 	model = moondream.photon(model_spec.model.model_id, device="mps:0", decode_path="native")
@@ -42,11 +49,13 @@ def generate_caption(image_path: str, components: dict) -> str:
 
 	image = PIL.Image.open(image_path).convert("RGB")
 	image = screenshot_lib.common_func.resize_image(image, components["max_dimension"])
+	# Keep visual evidence concise enough for the shared caption-quality limit.
+	settings = {"temperature": 0, "max_tokens": 192}
 	if components["prompt"]:
-		result = components["model"].query(image, components["prompt"])
+		result = components["model"].query(image, components["prompt"], settings=settings)
 		caption = result["answer"]
 	else:
-		result = components["model"].caption(image)
+		result = components["model"].caption(image, settings=settings)
 		caption = result["caption"]
 	caption_text = caption.strip()
 	return caption_text
