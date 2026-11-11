@@ -18,6 +18,7 @@
 - After the transfer fix and greedy generation, pass five generated-image
   captions, five captions of the reported log screenshot, and two custom visual
   queries through the production adapter in one fresh process. Keep screenshots unchanged.
+- Synchronized shared style guides, tests, and repository support files from the starter template.
 
 ### Decisions and Failures
 - Torch 2.15.0 exceeds the supported minors in the latest bridge wheel (0.1.2).
